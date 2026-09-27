@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Iowacraft: a fan-made voxel game about the Iowa First campaign.">
+<style>html{color-scheme:light}body{margin:0}</style>
+</head>
+<body>
+<title>Iowacraft</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+:root{
+  --green:#1a422b; --green-2:#2a6a3f; --green-3:#3e8a55;
+  --gold:#e0b43a; --gold-2:#f3d27a;
+  --sky:#8fc8f2;
+  --paper:#f2e8cf; --paper-2:#e6d9b8; --paper-3:#d8c99e;
+  --ink:#1e1a14; --ink-2:#4a4034;
+  --barn:#a63c2a;
+  --water:#3f8ed8; --runoff:#7a6a34;
+  --heart:#d7382c; --food:#e08a2a;
+  --display:'Press Start 2P',monospace; --body:'VT323','Courier New',monospace;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0;padding:0;overflow:hidden;background:var(--green);color:var(--ink);font-family:var(--body);font-size:20px;line-height:1.25;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;touch-action:none}
+#game{position:fixed;inset:0;background:var(--sky)}
+#game canvas{display:block;width:100%;height:100%;image-rendering:auto}
+button{font-family:var(--display);font-size:11px;line-height:1.6;letter-spacing:.02em;cursor:pointer;color:var(--paper);background:var(--green);
+  border:0;padding:12px 16px;box-shadow:0 4px 0 #0f2a1a, inset 0 0 0 3px var(--green-2);text-transform:uppercase}
+button:hover{background:var(--green-2)}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 #0f2a1a, inset 0 0 0 3px var(--green-2)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.alt{background:var(--paper-2);color:var(--ink);box-shadow:0 4px 0 #9d8b62, inset 0 0 0 3px var(--paper-3)}
+button.alt:hover{background:var(--paper-3)}
+button.gold{background:var(--gold);color:var(--ink);box-shadow:0 4px 0 #9a7818, inset 0 0 0 3px var(--gold-2)}
+button:disabled{opacity:.5;cursor:default}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;display:none}
+#hud.on{display:block}
+.pix{font-family:var(--display);font-size:10px;line-height:1.7;text-transform:uppercase;letter-spacing:.04em}
+#stats{position:absolute;left:14px;top:calc(14px + env(safe-area-inset-top,0px));display:grid;gap:6px}
+.meter{display:flex;align-items:center;gap:8px;color:#fff;text-shadow:2px 2px 0 #0008;font-family:var(--display);font-size:9px}
+.meter .lab{width:66px;opacity:.95}
+.hearts{display:flex;gap:2px}
+.hearts i{width:14px;height:14px;display:block;background:var(--heart);box-shadow:inset -3px -3px 0 #8b1d15, 0 0 0 2px #0006;clip-path:polygon(50% 100%,0 40%,0 15%,20% 0,40% 0,50% 12%,60% 0,80% 0,100% 15%,100% 40%)}
+.hearts i.off{background:#3a3a3a;box-shadow:inset -3px -3px 0 #222, 0 0 0 2px #0006}
+.hearts i.food{background:var(--food);box-shadow:inset -3px -3px 0 #8a4f12, 0 0 0 2px #0006;clip-path:polygon(20% 0,80% 0,100% 30%,100% 100%,0 100%,0 30%)}
+.hearts i.food.off{background:#3a3a3a;box-shadow:inset -3px -3px 0 #222, 0 0 0 2px #0006}
+.bar{width:150px;height:14px;background:#0008;box-shadow:0 0 0 2px #0006;position:relative}
+.bar b{display:block;height:100%;background:var(--water);box-shadow:inset 0 -4px 0 #0004}
+.bar.trust b{background:var(--gold)}
+.bar span{position:absolute;right:4px;top:0;font-size:8px;line-height:14px;color:#fff}
+
+#tracker{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top,0px));width:min(280px,44vw);color:#fff;text-shadow:2px 2px 0 #0009;text-align:right}
+#tracker .qt{font-family:var(--display);font-size:9px;line-height:1.6;color:var(--gold-2)}
+#tracker .qo{font-size:20px;line-height:1.1;margin-top:4px}
+#tracker .qd{font-family:var(--display);font-size:9px;margin-top:6px;opacity:.95}
+#compass{display:inline-block;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:16px solid var(--gold);vertical-align:middle;margin-right:6px;filter:drop-shadow(1px 1px 0 #000)}
+#minimap{position:absolute;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:168px;height:108px;image-rendering:pixelated;box-shadow:0 0 0 3px var(--green),0 0 0 5px #0006;background:#6a9a55;opacity:.95}
+@media (max-width:700px){#minimap{display:none}#tracker .qo{font-size:17px}}
+#clock{position:absolute;right:14px;bottom:calc(130px + env(safe-area-inset-bottom,0px));color:#fff;text-shadow:2px 2px 0 #0009;font-family:var(--display);font-size:9px;text-align:right}
+@media (max-width:700px){#clock{bottom:auto;top:calc(100px + env(safe-area-inset-top,0px))}}
+
+#cross{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);mix-blend-mode:difference}
+#cross:before,#cross:after{content:"";position:absolute;background:#fff}
+#cross:before{left:8px;top:0;width:2px;height:18px}
+#cross:after{top:8px;left:0;width:18px;height:2px}
+#breakring{position:absolute;left:50%;top:50%;width:40px;height:40px;transform:translate(-50%,-50%);border-radius:50%;
+  background:conic-gradient(var(--gold) var(--p,0%), transparent 0);mask:radial-gradient(circle,transparent 14px,#000 15px);-webkit-mask:radial-gradient(circle,transparent 14px,#000 15px);display:none}
+#hint{position:absolute;left:50%;top:calc(50% + 34px);transform:translateX(-50%);color:#fff;text-shadow:2px 2px 0 #000a;font-size:20px;white-space:nowrap}
+
+#hotbar{position:absolute;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:3px;pointer-events:auto}
+.slot{width:46px;height:46px;background:#0007;box-shadow:inset 0 0 0 3px #111,0 0 0 2px #fff4;position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.slot.sel{box-shadow:inset 0 0 0 3px #111,0 0 0 3px #fff}
+.slot canvas,.slot .emo{width:32px;height:32px;image-rendering:pixelated}
+.slot .emo{font-size:26px;line-height:32px;text-align:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.slot .n{position:absolute;right:3px;bottom:1px;color:#fff;font-family:var(--display);font-size:9px;text-shadow:1px 1px 0 #000}
+.slot .k{position:absolute;left:3px;top:1px;color:#fff9;font-family:var(--display);font-size:7px}
+@media (max-width:700px){.slot{width:36px;height:36px}.slot canvas,.slot .emo{width:24px;height:24px}.slot .emo{font-size:20px;line-height:24px}}
+#itemname{position:absolute;left:50%;bottom:calc(66px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:#fff;text-shadow:2px 2px 0 #000a;font-size:20px;white-space:nowrap;transition:opacity .4s;opacity:0}
+
+#toasts{position:absolute;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:grid;gap:8px;width:min(560px,92vw);justify-items:center}
+.toast{background:#0009;color:#fff;padding:8px 14px;font-size:20px;text-shadow:1px 1px 0 #000;box-shadow:0 0 0 2px #fff3;animation:tin .25s ease-out;text-align:center}
+.toast.q{background:var(--paper);color:var(--ink);text-shadow:none;box-shadow:0 0 0 4px var(--green),0 8px 0 #0005;padding:12px 16px;text-align:left;width:100%;box-sizing:border-box}
+.toast.q .h{font-family:var(--display);font-size:9px;color:var(--green);margin-bottom:6px;text-transform:uppercase}
+.toast.q .s{font-size:16px;color:var(--ink-2);margin-top:6px}
+@keyframes tin{from{transform:translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+
+#dialog{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(680px,94vw);background:var(--paper);color:var(--ink);
+  box-shadow:0 0 0 4px var(--green),0 0 0 7px var(--paper),0 10px 0 #0006;padding:14px 18px;box-sizing:border-box;pointer-events:auto;display:none}
+#dialog.on{display:block}
+#dialog .who{font-family:var(--display);font-size:10px;color:var(--green);text-transform:uppercase;margin-bottom:8px}
+#dialog .txt{font-size:22px;line-height:1.2;min-height:56px}
+#dialog .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+#dialog .row .pg{font-family:var(--display);font-size:9px;color:var(--ink-2)}
+
+/* ---------- Panels ---------- */
+.panel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0008;padding:16px;box-sizing:border-box;z-index:20}
+.panel.on{display:flex}
+.card{background:var(--paper);color:var(--ink);width:min(760px,100%);max-height:calc(100% - 24px);overflow:auto;box-shadow:0 0 0 4px var(--green),0 0 0 8px var(--paper),0 0 0 11px var(--green),0 14px 0 #0007;
+  padding:22px 24px;box-sizing:border-box;position:relative}
+.card h1{font-family:var(--display);font-size:clamp(18px,4vw,30px);line-height:1.3;margin:0 0 6px;color:var(--green);letter-spacing:.02em;text-wrap:balance}
+.card h2{font-family:var(--display);font-size:12px;line-height:1.6;margin:18px 0 8px;color:var(--green);text-transform:uppercase;letter-spacing:.05em}
+.card h3{font-family:var(--display);font-size:10px;line-height:1.6;margin:14px 0 4px;color:var(--ink);text-transform:uppercase}
+.card p{margin:0 0 10px;font-size:21px;line-height:1.2;max-width:62ch}
+.card .sub{font-family:var(--display);font-size:10px;color:var(--barn);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+.card .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.card .fine{font-size:16px;color:var(--ink-2);line-height:1.2;margin-top:16px;border-top:2px dashed var(--paper-3);padding-top:10px}
+.card a{color:var(--green-2)}
+.card .close{position:absolute;right:10px;top:10px;padding:8px 10px;font-size:10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{padding:8px 10px;font-size:9px}
+.tabs button.on{background:var(--gold);color:var(--ink);box-shadow:0 4px 0 #9a7818, inset 0 0 0 3px var(--gold-2)}
+.tab{display:none}.tab.on{display:block}
+
+/* title */
+#title .card{width:min(680px,100%);text-align:left}
+#logo{font-family:var(--display);font-size:clamp(28px,7vw,56px);line-height:1.05;color:var(--green);text-shadow:4px 4px 0 var(--gold);margin:6px 0 4px;letter-spacing:.02em}
+#logo small{display:block;font-size:clamp(10px,2vw,14px);color:var(--barn);text-shadow:none;margin-top:10px;letter-spacing:.08em}
+.badge{display:inline-block;background:var(--green);color:var(--paper);font-family:var(--display);font-size:9px;padding:6px 10px;box-shadow:0 3px 0 #0f2a1a;margin:4px 6px 4px 0;text-transform:uppercase}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:19px;align-items:baseline}
+.keys b{font-family:var(--display);font-size:9px;background:var(--ink);color:var(--paper);padding:5px 7px;white-space:nowrap}
+
+/* inventory / crafting */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px}
+.cell{aspect-ratio:1;background:#0002;box-shadow:inset 0 0 0 3px #0003;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.cell:hover{background:#0003}
+.cell canvas,.cell .emo{width:34px;height:34px;image-rendering:pixelated}
+.cell .emo{font-size:28px;line-height:34px;text-align:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.cell .n{position:absolute;right:4px;bottom:2px;font-family:var(--display);font-size:9px;color:var(--ink)}
+.recipes{display:grid;gap:8px}
+.rec{display:flex;align-items:center;gap:12px;background:#0001;padding:8px 10px;box-shadow:inset 0 0 0 2px #0002;flex-wrap:wrap}
+.rec .ico{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#0002}
+.rec .ico canvas,.rec .ico .emo{width:28px;height:28px;image-rendering:pixelated}
+.rec .ico .emo{font-size:24px;line-height:28px;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.rec .nm{flex:1;min-width:140px}
+.rec .nm small{display:block;font-size:16px;color:var(--ink-2)}
+.rec button{padding:8px 10px;font-size:9px}
+
+/* journal */
+.quest{padding:10px 12px;box-shadow:inset 0 0 0 2px #0002;background:#0001;margin-bottom:8px}
+.quest.done{background:#2a6a3f22}
+.quest.track{box-shadow:inset 0 0 0 3px var(--gold)}
+.quest .t{font-family:var(--display);font-size:10px;color:var(--green);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.quest .t .st{font-size:8px;color:var(--barn)}
+.quest .o{margin-top:6px;font-size:20px}
+.quest .qq{margin-top:8px;padding:8px 10px;background:var(--paper-2);font-size:19px;line-height:1.15;border-left:4px solid var(--gold)}
+.quest .qq small{display:block;color:var(--ink-2);font-size:15px;margin-top:4px}
+.quest .act{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.quest .act button{padding:7px 9px;font-size:8px}
+.note{padding:10px 12px;background:var(--paper-2);margin-bottom:8px;font-size:19px;line-height:1.15;border-left:4px solid var(--green)}
+.note b{font-family:var(--display);font-size:9px;display:block;color:var(--green);margin-bottom:4px;text-transform:uppercase}
+.note small{display:block;color:var(--ink-2);font-size:15px;margin-top:4px}
+.src{font-size:17px;line-height:1.25;margin:0 0 6px;padding-left:12px;text-indent:-12px;word-break:break-word}
+
+/* ---------- touch ---------- */
+#touch{position:fixed;inset:0;pointer-events:none;display:none;z-index:10}
+#touch.on{display:block}
+#joy{position:absolute;left:22px;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:130px;height:130px;border-radius:50%;background:#0004;box-shadow:0 0 0 3px #fff5;pointer-events:auto}
+#knob{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:#fffa;box-shadow:0 3px 0 #0006}
+#look{position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto}
+.tb{position:absolute;width:62px;height:62px;border-radius:50%;background:#0006;box-shadow:0 0 0 3px #fff6;color:#fff;font-family:var(--display);font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:auto;text-align:center;line-height:1.3}
+.tb:active,.tb.held{background:var(--gold);color:var(--ink)}
+#tJump{right:22px;bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+#tMine{right:98px;bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+#tPlace{right:98px;bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+#tUse{right:172px;bottom:calc(114px + env(safe-area-inset-bottom,0px))}
+#tInv{left:22px;top:calc(120px + env(safe-area-inset-top,0px));width:52px;height:52px;font-size:8px}
+#tJournal{left:82px;top:calc(120px + env(safe-area-inset-top,0px));width:52px;height:52px;font-size:8px}
+#tView{left:142px;top:calc(120px + env(safe-area-inset-top,0px));width:52px;height:52px;font-size:8px}
+#tPause{right:22px;top:calc(120px + env(safe-area-inset-top,0px));width:52px;height:52px;font-size:8px}
+#tSprint{left:170px;bottom:calc(92px + env(safe-area-inset-bottom,0px));width:52px;height:52px;font-size:8px}
+@media (max-width:700px){
+  #stats{transform:scale(.8);transform-origin:top left;left:10px;top:calc(8px + env(safe-area-inset-top,0px))}
+  #tracker{left:10px;right:auto;top:calc(92px + env(safe-area-inset-top,0px));width:calc(100% - 90px);text-align:left}
+  #tracker .qo{font-size:16px}
+  #clock{bottom:auto;right:auto;left:10px;top:calc(206px + env(safe-area-inset-top,0px))}
+  #toasts{top:36%}
+  .toast{font-size:16px}
+  #tPause{top:calc(10px + env(safe-area-inset-top,0px));right:10px}
+  #tInv{left:auto;right:10px;top:calc(70px + env(safe-area-inset-top,0px))}
+  #tJournal{left:auto;right:10px;top:calc(130px + env(safe-area-inset-top,0px))}
+  #tView{left:auto;right:10px;top:calc(190px + env(safe-area-inset-top,0px))}
+  #joy{left:14px;bottom:calc(110px + env(safe-area-inset-bottom,0px));width:120px;height:120px}
+  #knob{left:35px;top:35px}
+  #tSprint{left:146px;bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+  #tJump{right:14px;bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+  #tPlace{right:86px;bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+  #tMine{right:86px;bottom:calc(184px + env(safe-area-inset-bottom,0px))}
+  #tUse{right:158px;bottom:calc(184px + env(safe-area-inset-bottom,0px))}
+  #hint{font-size:16px;top:calc(50% + 28px)}
+  #itemname{font-size:16px}
+}
+
+#loading{position:fixed;inset:0;background:var(--green);color:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;font-family:var(--display);font-size:11px;text-align:center;padding:20px;box-sizing:border-box}
+#loading .lbar{width:min(320px,80vw);height:16px;background:#0006;box-shadow:0 0 0 3px var(--paper)}
+#loading .lbar b{display:block;height:100%;width:0;background:var(--gold)}
+#loading .big{font-size:clamp(22px,6vw,40px);color:var(--paper);text-shadow:4px 4px 0 var(--gold);line-height:1.1}
+#loading small{font-family:var(--body);font-size:20px;opacity:.9}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="game"></div>
+
+<div id="loading">
+  <div class="big">IOWACRAFT</div>
+  <div>Plowing the world…</div>
+  <div class="lbar"><b id="lprog"></b></div>
+  <small id="lmsg">Generating 99 counties of blocks</small>
+</div>
+
+<div id="hud">
+  <div id="stats">
+    <div class="meter"><span class="lab">Health</span><div class="hearts" id="hearts"></div></div>
+    <div class="meter"><span class="lab">Real food</span><div class="hearts" id="foods"></div></div>
+    <div class="meter"><span class="lab">Clean water</span><div class="bar"><b id="waterbar"></b><span id="watertxt"></span></div></div>
+    <div class="meter"><span class="lab">Trust</span><div class="bar trust"><b id="trustbar"></b><span id="trusttxt"></span></div></div>
+  </div>
+  <div id="tracker">
+    <div class="qt" id="trkTitle"></div>
+    <div class="qo" id="trkObj"></div>
+    <div class="qd"><span id="compass"></span><span id="trkDist"></span></div>
+  </div>
+  <canvas id="minimap" width="224" height="144"></canvas>
+  <div id="clock"></div>
+  <div id="cross"></div><div id="breakring"></div>
+  <div id="hint"></div>
+  <div id="toasts"></div>
+  <div id="itemname"></div>
+  <div id="hotbar"></div>
+  <div id="dialog">
+    <div class="who" id="dWho"></div>
+    <div class="txt" id="dTxt"></div>
+    <div class="row"><span class="pg" id="dPg"></span><div style="display:flex;gap:8px"><button class="alt" id="dClose">Close</button><button id="dNext">Next ▶</button></div></div>
+  </div>
+</div>
+
+<div id="touch">
+  <div id="joy"><div id="knob"></div></div>
+  <div id="look"></div>
+  <div class="tb" id="tJump">JUMP</div>
+  <div class="tb" id="tMine">MINE</div>
+  <div class="tb" id="tPlace">PLACE</div>
+  <div class="tb" id="tUse">USE</div>
+  <div class="tb" id="tSprint">RUN</div>
+  <div class="tb" id="tInv">BAG</div>
+  <div class="tb" id="tJournal">NOTE<br>BOOK</div>
+  <div class="tb" id="tView">VIEW</div>
+  <div class="tb" id="tPause">MENU</div>
+</div>
+
+<!-- TITLE -->
+<div class="panel" id="title">
+  <div class="card">
+    <div id="logo">IOWACRAFT<small>Iowa First · Make Iowa Healthy Again</small></div>
+    <p>A blocky Iowa, 224 blocks wide. Start on the family farm outside Belle Plaine, clean up the creek, take on the Big Ag cartel, put Iowa-grown food in the school cafeteria, and make it to Terrace Hill by Election Night.</p>
+    <div>
+      <span class="badge">Cover crops</span><span class="badge">Nitrate slimes</span><span class="badge">Antitrust</span><span class="badge">80% Iowa lunch</span><span class="badge">Taylorcraft</span><span class="badge">MAHA rally</span>
+    </div>
+    <div class="btns">
+      <button class="gold" id="btnNew">New game</button>
+      <button id="btnContinue" hidden>Continue</button>
+      <button class="alt" id="btnHow">How to play</button>
+      <button class="alt" id="btnNotes">Campaign notebook</button>
+    </div>
+    <div class="fine">Fan-made by a supporter. Not authorized by, paid for by, or affiliated with Lahn for Governor, MAHA Action, or any committee. Every quoted line is from Zach Lahn's website, debates, interviews, or news coverage — see the Sources tab in the Campaign Notebook. Ryan and Ashley Wallace are Zach's real neighbors (and Ashley really does run the King); their lines here are invented for the game. Everyone else (Kayla, Dr. Okafor, Priya…) is made up. Free to play, free to host.</div>
+  </div>
+</div>
+
+<!-- HOW TO PLAY -->
+<div class="panel" id="help">
+  <div class="card">
+    <button class="close alt" data-close="help">✕</button>
+    <h1>How to play</h1>
+    <div class="sub">Keyboard &amp; mouse — or thumbs on a phone</div>
+    <div class="keys">
+      <b>W A S D</b><span>Walk. Hold <b style="font-size:8px">SHIFT</b> to sprint.</span>
+      <b>MOUSE</b><span>Look around (click the game to capture the mouse; Esc releases it).</span>
+      <b>SPACE</b><span>Jump. Hold in water to swim up.</span>
+      <b>LEFT CLICK</b><span>Hold to mine the block you're looking at. Tap to whack a nitrate slime.</span>
+      <b>RIGHT CLICK</b><span>Place the selected block, or use the selected item (bottle on water, hay to lead cows).</span>
+      <b>E</b><span>Talk to whoever you're looking at. Otherwise open your bag &amp; workbench.</span>
+      <b>1–9 / SCROLL</b><span>Pick a hotbar slot.</span>
+      <b>J</b><span>Campaign Notebook: quests, what Zach has said, sources.</span>
+      <b>Q</b><span>Track the next quest (the compass arrow points at it).</span>
+      <b>F5</b><span>Toggle first / third person.</span>
+      <b>M</b><span>Toggle the minimap.</span>
+      <b>ESC</b><span>Pause.</span>
+    </div>
+    <h2>The idea</h2>
+    <p>Everything you do maps to a plank in the Iowa First platform. Plant cover crops and prairie strips beside brown water and it runs clear. Nitrate slimes crawl out of dirty water at night; clean the water and they stop coming. Eat Iowa-grown food to keep your Real Food meter up; the vending machine stuff spikes and crashes.</p>
+    <p>Find the yellow Taylorcraft on the northeast lawn by the road, look at it and press E to fly. Press E again to set down.</p>
+    <div class="btns"><button class="gold" data-close="help">Got it</button></div>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div class="panel" id="pause">
+  <div class="card" style="width:min(520px,100%)">
+    <h1>Paused</h1>
+    <div class="sub" id="pauseSub">Iowa First</div>
+    <div class="btns">
+      <button class="gold" id="btnResume">Resume</button>
+      <button class="alt" id="btnJournal2">Notebook</button>
+      <button class="alt" id="btnHelp2">How to play</button>
+      <button class="alt" id="btnSave">Save</button>
+      <button class="alt" id="btnQuit">Title screen</button>
+    </div>
+    <p class="fine" id="saveMsg">Autosaves every 20 seconds in this browser.</p>
+  </div>
+</div>
+
+<!-- INVENTORY / CRAFT -->
+<div class="panel" id="inv">
+  <div class="card">
+    <button class="close alt" data-close="inv">✕</button>
+    <h1>Bag &amp; workbench</h1>
+    <div class="sub">Click a bag item to put it in the selected hotbar slot</div>
+    <div class="tabs"><button class="on" data-tab="bag">Bag</button><button data-tab="craft">Workbench</button><button data-tab="eat">Eat</button></div>
+    <div class="tab on" id="tab-bag"><div class="grid" id="bagGrid"></div><p class="fine" id="bagEmpty">Nothing yet. Punch a tree.</p></div>
+    <div class="tab" id="tab-craft"><div class="recipes" id="recipes"></div></div>
+    <div class="tab" id="tab-eat"><div class="recipes" id="eatList"></div><p class="fine">Iowa-grown food fills the Real Food meter and slowly heals you. Vending-machine snacks fill it fast, then crash it.</p></div>
+  </div>
+</div>
+
+<!-- JOURNAL -->
+<div class="panel" id="journal">
+  <div class="card">
+    <button class="close alt" data-close="journal">✕</button>
+    <h1>Campaign Notebook</h1>
+    <div class="sub" id="jSub">Iowa First · four-year goals</div>
+    <div class="tabs"><button class="on" data-tab="quests">Quests</button><button data-tab="notes">What Zach has said</button><button data-tab="goals">Scoreboard</button><button data-tab="sources">Sources</button></div>
+    <div class="tab on" id="tab-quests"><div id="questList"></div></div>
+    <div class="tab" id="tab-notes"><div id="noteList"></div></div>
+    <div class="tab" id="tab-goals"><div id="goalList"></div></div>
+    <div class="tab" id="tab-sources"><div id="srcList"></div></div>
+  </div>
+</div>
+
+<!-- DEATH -->
+<div class="panel" id="dead">
+  <div class="card" style="width:min(520px,100%)">
+    <h1>Runoff got you.</h1>
+    <p id="deadTxt">You wake up on the porch at Homeplace. The creek is still brown. Somebody should do something about that.</p>
+    <div class="btns"><button class="gold" id="btnRespawn">Get back up</button></div>
+  </div>
+</div>
+
+<!-- ENDING -->
+<div class="panel" id="ending">
+  <div class="card">
+    <h1>Terrace Hill</h1>
+    <div class="sub">Tuesday, November 3, 2026 · Des Moines</div>
+    <div id="endBody"></div>
+    <div class="btns"><button class="gold" id="btnEndNotes">Read the notebook</button><button class="alt" id="btnEndPlay">Keep exploring</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+/* =====================================================================
+   IOWACRAFT — a fan-made voxel game about the Iowa First campaign.
+   Single-file. Three.js r128 (cdnjs). No textures on disk: the atlas is
+   painted onto a canvas at startup.
+   ===================================================================== */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, floor=Math.floor;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hash2(x,z){let h=(x*374761393+z*668265263)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296}
+// smooth 2-D value noise
+function vnoise(x,z){const xi=floor(x),zi=floor(z),xf=x-xi,zf=z-zi,u=xf*xf*(3-2*xf),w=zf*zf*(3-2*zf);
+  return lerp(lerp(hash2(xi,zi),hash2(xi+1,zi),u),lerp(hash2(xi,zi+1),hash2(xi+1,zi+1),u),w);}
+function fbm(x,z,oct,sc){let a=0,amp=1,f=1,n=0;for(let i=0;i<oct;i++){a+=amp*(vnoise(x*f/sc+i*17.3,z*f/sc+i*9.1)*2-1);n+=amp;amp*=0.5;f*=2}return a/n}
+
+/* ---------------- world dimensions ---------------- */
+const WX=224, WY=40, WZ=144, SEA=8;
+const blocks=new Uint8Array(WX*WY*WZ);
+const idx=(x,y,z)=>(x*WZ+z)*WY+y;
+const inW=(x,y,z)=>x>=0&&x<WX&&y>=0&&y<WY&&z>=0&&z<WZ;
+function getB(x,y,z){return inW(x,y,z)?blocks[(x*WZ+z)*WY+y]:(y<0?B.BEDROCK:B.AIR)}
+function setRaw(x,y,z,v){if(inW(x,y,z))blocks[(x*WZ+z)*WY+y]=v}
+
+/* ---------------- block registry ---------------- */
+const B={CEDAR:46,DWINDOW:47,SHINGLE:48,AIR:0,GRASS:1,DIRT:2,STONE:3,WATER:4,POLLUTED:5,SAND:6,LOG:7,LEAVES:8,PLANK:9,CORN:10,OATS:11,PRAIRIE:12,COVER:13,SOIL:14,FENCE:15,BRICK:16,GLASS:17,GRAVEL:18,STEEL:19,HAY:20,SIDING:21,ROOF:22,LIMESTONE:23,GOLD:24,CONCRETE:25,SIGN:26,TALLGRASS:27,FLOWER:28,IRONORE:29,DARKPLANK:30,MARQUEE:31,VENDING:32,FRESHSTAND:33,ABSENTEE:34,BEDROCK:35,LEDGER:36,ASPHALT:37,APPLELEAVES:38,SOY:39,LABTILE:40,FAMILYSIGN:41,DRAIN:42,RAIL:43,WHITEFENCE:44,BANNER:45};
+// tex: [top, side, bottom] tile indices. mesh: cube | cross | water | none
+const BD=[];
+function def(id,o){BD[id]=Object.assign({name:'?',solid:true,opaque:true,mesh:'cube',tex:[0,0,0],hard:0.6,drop:null,unbreak:false,replace:false,item:null},o)}
+def(B.AIR,{name:'Air',solid:false,opaque:false,mesh:'none',replace:true});
+def(B.GRASS,{name:'Grass block',tex:[0,1,2],hard:.45,drop:'dirt',item:'grass'});
+def(B.DIRT,{name:'Dirt',tex:[2,2,2],hard:.4,drop:'dirt',item:'dirt'});
+def(B.STONE,{name:'Stone',tex:[3,3,3],hard:1.1,drop:'stone',item:'stone'});
+def(B.WATER,{name:'Water',solid:false,opaque:false,mesh:'water',tex:[4,4,4],unbreak:true,replace:true});
+def(B.POLLUTED,{name:'Nitrate-loaded water',solid:false,opaque:false,mesh:'water',tex:[5,5,5],unbreak:true,replace:true});
+def(B.SAND,{name:'Sand',tex:[6,6,6],hard:.4,drop:'sand',item:'sand'});
+def(B.LOG,{name:'Log',tex:[8,7,8],hard:.8,drop:'log',item:'log'});
+def(B.LEAVES,{name:'Leaves',opaque:false,tex:[9,9,9],hard:.25,drop:null,item:'leaves'});
+def(B.PLANK,{name:'Planks',tex:[10,10,10],hard:.7,drop:'plank',item:'plank'});
+def(B.CORN,{name:'Corn',solid:false,opaque:false,mesh:'cross',tex:[11,11,11],hard:0,drop:'sweetcorn'});
+def(B.OATS,{name:'Oats',solid:false,opaque:false,mesh:'cross',tex:[12,12,12],hard:0,drop:'oats'});
+def(B.PRAIRIE,{name:'Prairie strip',solid:false,opaque:false,mesh:'cross',tex:[13,13,13],hard:0,drop:'prairie',item:'prairie'});
+def(B.COVER,{name:'Cover crop',solid:false,opaque:false,mesh:'cross',tex:[14,14,14],hard:0,drop:'cover',item:'cover'});
+def(B.SOIL,{name:'Tilled soil',tex:[15,15,2],hard:.4,drop:'dirt',item:'soil'});
+def(B.FENCE,{name:'Fence',opaque:false,tex:[16,16,16],hard:.6,drop:'fence',item:'fence'});
+def(B.BRICK,{name:'Brick',tex:[17,17,17],hard:1.0,drop:'brick',item:'brick'});
+def(B.GLASS,{name:'Glass',opaque:false,tex:[18,18,18],hard:.3,drop:'glass',item:'glass'});
+def(B.GRAVEL,{name:'Gravel road',tex:[19,19,19],hard:.5,drop:'gravel',item:'gravel'});
+def(B.STEEL,{name:'Steel',tex:[20,20,20],hard:2,unbreak:true});
+def(B.HAY,{name:'Hay bale',tex:[22,21,22],hard:.5,drop:'hay',item:'hay'});
+def(B.SIDING,{name:'White siding',tex:[23,23,23],hard:.7,drop:'siding',item:'siding'});
+def(B.ROOF,{name:'Red roof',tex:[24,24,24],hard:.7,drop:'roof',item:'roof'});
+def(B.LIMESTONE,{name:'Limestone',tex:[25,25,25],hard:2,unbreak:true});
+def(B.GOLD,{name:'Gold leaf',tex:[26,26,26],hard:2,unbreak:true});
+def(B.CONCRETE,{name:'Concrete',tex:[27,27,27],hard:2,unbreak:true});
+def(B.SIGN,{name:'IOWA FIRST yard sign',opaque:false,tex:[28,28,28],hard:.3,drop:'sign',item:'sign'});
+def(B.TALLGRASS,{name:'Tall grass',solid:false,opaque:false,mesh:'cross',tex:[29,29,29],hard:0,drop:'tallgrass',replace:true,item:'tallgrass'});
+def(B.FLOWER,{name:'Wildflower',solid:false,opaque:false,mesh:'cross',tex:[30,30,30],hard:0,drop:'flower',replace:true,item:'flower'});
+def(B.IRONORE,{name:'Iron ore',tex:[31,31,31],hard:1.3,drop:'iron'});
+def(B.DARKPLANK,{name:'Dark planks',tex:[32,32,32],hard:.7,drop:'darkplank',item:'darkplank'});
+def(B.MARQUEE,{name:'King Theater marquee',tex:[33,33,33],hard:2,unbreak:true});
+def(B.VENDING,{name:'Vending machine',tex:[34,34,34],hard:1.0,drop:'snack'});
+def(B.FRESHSTAND,{name:'Iowa Fresh stand',tex:[35,35,35],hard:.6,drop:'freshstand',item:'freshstand'});
+def(B.ABSENTEE,{name:'Absentee-owner sign',opaque:false,tex:[36,36,36],hard:2,unbreak:true});
+def(B.BEDROCK,{name:'Bedrock',tex:[37,37,37],hard:99,unbreak:true});
+def(B.LEDGER,{name:'Cartel ledger box',tex:[38,38,38],hard:.5,drop:'ledger'});
+def(B.ASPHALT,{name:'Highway',tex:[39,39,39],hard:.9,drop:'gravel'});
+def(B.APPLELEAVES,{name:'Apple tree',opaque:false,tex:[40,40,40],hard:.25,drop:'apple'});
+def(B.SOY,{name:'Soybeans',solid:false,opaque:false,mesh:'cross',tex:[41,41,41],hard:0,drop:null});
+def(B.LABTILE,{name:'Lab tile',tex:[42,42,42],hard:2,unbreak:true});
+def(B.FAMILYSIGN,{name:'Iowa family farm sign',opaque:false,tex:[43,43,43],hard:2,unbreak:true});
+def(B.DRAIN,{name:'Cooling intake',tex:[44,44,44],hard:2,unbreak:true});
+def(B.RAIL,{name:'Railroad',tex:[45,45,45],hard:2,unbreak:true});
+def(B.WHITEFENCE,{name:'White fence',opaque:false,tex:[46,46,46],hard:.6,drop:'whitefence',item:'whitefence'});
+def(B.BANNER,{name:'Rally banner',tex:[47,47,47],hard:.4,drop:'banner',item:'banner'});
+def(B.CEDAR,{name:'Cedar siding',tex:[49,49,49],hard:.7,drop:'cedar',item:'cedar'});
+def(B.DWINDOW,{name:'Window',opaque:false,tex:[48,48,48],hard:.3,drop:'glass'});
+def(B.SHINGLE,{name:'Dark shingles',tex:[50,50,50],hard:.7,drop:'shingle',item:'shingle'});
+const isSolid=(x,y,z)=>{const b=getB(x,y,z);return BD[b].solid};
+const isOpaque=b=>BD[b].opaque;
+const isWater=b=>b===B.WATER||b===B.POLLUTED;
+
+/* ---------------- items ---------------- */
+const ITEMS={
+  grass:{name:'Grass block',block:B.GRASS},dirt:{name:'Dirt',block:B.DIRT},stone:{name:'Stone',block:B.STONE},sand:{name:'Sand',block:B.SAND},
+  log:{name:'Log',block:B.LOG},leaves:{name:'Leaves',block:B.LEAVES},plank:{name:'Planks',block:B.PLANK},darkplank:{name:'Dark planks',block:B.DARKPLANK},
+  fence:{name:'Fence',block:B.FENCE},whitefence:{name:'White fence',block:B.WHITEFENCE},brick:{name:'Brick',block:B.BRICK},glass:{name:'Glass',block:B.GLASS},gravel:{name:'Gravel',block:B.GRAVEL},
+  hay:{name:'Hay bale',block:B.HAY,desc:'Hold it and cows follow you.'},cedar:{name:'Cedar siding',block:B.CEDAR},shingle:{name:'Dark shingles',block:B.SHINGLE},siding:{name:'White siding',block:B.SIDING},roof:{name:'Red roof',block:B.ROOF},soil:{name:'Tilled soil',block:B.SOIL},
+  sign:{name:'IOWA FIRST yard sign',block:B.SIGN,desc:'Plant it anywhere. Ten of them is a movement.'},banner:{name:'Rally banner',block:B.BANNER},
+  prairie:{name:'Prairie strip',block:B.PRAIRIE,desc:'Plant beside dirty water. Roots hold soil, strip pulls nitrate.'},
+  cover:{name:'Cover crop',block:B.COVER,desc:'Plant on soil or grass near dirty water to cut the nitrate load.'},
+  tallgrass:{name:'Tall grass',block:B.TALLGRASS},flower:{name:'Wildflower',block:B.FLOWER},freshstand:{name:'Iowa Fresh stand',block:B.FRESHSTAND,desc:'Replaces a vending machine.'},
+  oats:{name:'Iowa oats',emoji:'🥣',food:2,desc:'Grown on the farm. Eat it, or craft cover-crop seed.'},
+  sweetcorn:{name:'Sweet corn',emoji:'🌽',food:3},apple:{name:'Apple',emoji:'🍎',food:3},eggs:{name:'Farm eggs',emoji:'🥚',food:3},beef:{name:'Iowa beef',emoji:'🥩',food:5},
+  snack:{name:'Vending snack',emoji:'🍬',food:5,crash:6,desc:'Red 40, corn syrup and a crash in 15 seconds.'},
+  bottle:{name:'Sample bottle',emoji:'🧪',desc:'Right-click water or soil to take a sample.'},
+  wsample:{name:'Water sample',emoji:'💧'},ssample:{name:'Soil sample',emoji:'🟤'},
+  ledger:{name:'Cartel price ledger',emoji:'📕',desc:'Evidence for the antitrust suit.'},
+  iron:{name:'Iron',emoji:'⛓️'},collar:{name:'GPS collar',emoji:'📡',desc:'Right-click a cow.'},
+  voucher:{name:'Down-payment rebate',emoji:'🏠',desc:'For a young Iowan thinking about leaving.'},
+  labreport:{name:'Independent lab report',emoji:'📄'},
+  deed:{name:'Homestead deed',emoji:'📜'}
+};
+const RECIPES=[
+  {out:'plank',n:4,in:{log:1},how:'Split a log'},
+  {out:'fence',n:3,in:{plank:2},how:'Rails and posts'},
+  {out:'whitefence',n:3,in:{plank:2,siding:1},how:'Painted rails'},
+  {out:'sign',n:1,in:{plank:2},how:'Green stake, white letters'},
+  {out:'banner',n:1,in:{plank:1,flower:2},how:'Cloth on a pole'},
+  {out:'cover',n:2,in:{oats:1},how:'Seed from the oat crop'},
+  {out:'prairie',n:1,in:{tallgrass:1,flower:1},how:'Native seed mix'},
+  {out:'glass',n:2,in:{sand:2},how:'Sand in the kiln'},
+  {out:'bottle',n:2,in:{glass:1},how:'Blown bottles'},
+  {out:'collar',n:1,in:{iron:1,glass:1},how:'Receiver, strap, antenna'},
+  {out:'hay',n:1,in:{oats:3},how:'Bale it'},
+  {out:'freshstand',n:1,in:{plank:4,apple:1},how:'A stand for Iowa-grown food'},
+  {out:'soil',n:1,in:{dirt:1},how:'Till it'},
+  {out:'brick',n:2,in:{stone:1,dirt:1},how:'Fired clay'}
+];
+
+/* ---------------- texture atlas ---------------- */
+const ATLAS=document.createElement('canvas');ATLAS.width=256;ATLAS.height=256;
+(function paintAtlas(){
+  const c=ATLAS.getContext('2d',{willReadFrequently:true});c.clearRect(0,0,256,256);
+  const r=mulberry32(7);
+  function T(i,fn){const ox=(i%16)*16,oy=floor(i/16)*16;c.save();c.beginPath();c.rect(ox,oy,16,16);c.clip();c.clearRect(ox,oy,16,16);
+    const px=(x,y,col)=>{c.fillStyle=col;c.fillRect(ox+x,oy+y,1,1)};
+    const fill=col=>{c.fillStyle=col;c.fillRect(ox,oy,16,16)};
+    const noise=(cols,dens)=>{for(let y=0;y<16;y++)for(let x=0;x<16;x++)if(r()<(dens||.5))px(x,y,cols[floor(r()*cols.length)])};
+    const rect=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(ox+x,oy+y,w,h)};
+    fn({px,fill,noise,rect,r});c.restore()}
+  T(0,a=>{a.fill('#5d9a3c');a.noise(['#569236','#66a544','#4f8a33','#6fae4b'],.7)});           // grass top
+  T(1,a=>{a.fill('#7a5230');a.noise(['#6e4a2b','#8a5d37','#5f3f24'],.6);a.rect(0,0,16,3,'#5d9a3c');for(let x=0;x<16;x++)if(a.r()<.6)a.px(x,3,'#569236');for(let x=0;x<16;x++)if(a.r()<.3)a.px(x,4,'#569236')}); // grass side
+  T(2,a=>{a.fill('#7a5230');a.noise(['#6e4a2b','#8a5d37','#5f3f24','#946a42'],.6)});             // dirt
+  T(3,a=>{a.fill('#8c8c8c');a.noise(['#7f7f7f','#9a9a9a','#757575','#a3a3a3'],.55);a.rect(2,5,5,1,'#6d6d6d');a.rect(9,10,5,1,'#6d6d6d');a.rect(11,2,1,3,'#6d6d6d')}); // stone
+  T(4,a=>{a.fill('#3f8ed8');a.noise(['#3a86cf','#4a9ae0','#5aa8ea'],.5);a.rect(1,3,5,1,'#8cc8f5');a.rect(9,8,5,1,'#8cc8f5');a.rect(3,12,4,1,'#8cc8f5')}); // water
+  T(5,a=>{a.fill('#7a6a34');a.noise(['#6e5f2c','#857540','#5f5226','#8f8148'],.6);a.rect(2,4,4,1,'#a5985a');a.rect(9,10,4,1,'#a5985a');a.rect(6,13,3,1,'#5b7d2d')}); // polluted
+  T(6,a=>{a.fill('#dccb95');a.noise(['#d3c28b','#e6d6a3','#c9b880'],.5)});                       // sand
+  T(7,a=>{a.fill('#5a3d22');for(let x=0;x<16;x++){const col=x%4===0?'#4a3019':x%4===2?'#6b4a2a':'#5a3d22';a.rect(x,0,1,16,col)}a.noise(['#4a3019','#6b4a2a'],.15)}); // log side
+  T(8,a=>{a.fill('#8a6a3c');a.rect(2,2,12,12,'#a07c48');a.rect(4,4,8,8,'#8a6a3c');a.rect(6,6,4,4,'#a07c48');a.rect(7,7,2,2,'#6b4a2a')}); // log top
+  T(9,a=>{a.fill('#2f6b2a');a.noise(['#2a5f25','#3a7d33','#245420','#468f3d'],.7);for(let i=0;i<10;i++)a.px(floor(a.r()*16),floor(a.r()*16),'rgba(0,0,0,0)')}); // leaves (holes)
+  T(10,a=>{a.fill('#b48a4c');a.noise(['#ad8347','#bb9254','#a67c42'],.4);a.rect(0,3,16,1,'#7d5c30');a.rect(0,7,16,1,'#7d5c30');a.rect(0,11,16,1,'#7d5c30');a.rect(0,15,16,1,'#7d5c30');a.rect(7,0,1,3,'#7d5c30');a.rect(3,8,1,3,'#7d5c30');a.rect(11,12,1,3,'#7d5c30')}); // planks
+  T(11,a=>{a.rect(7,0,2,16,'#4f8a2c');a.rect(3,4,4,1,'#5d9a3c');a.rect(9,7,5,1,'#5d9a3c');a.rect(2,10,5,1,'#5d9a3c');a.rect(9,2,4,1,'#5d9a3c');a.rect(4,6,3,4,'#e8c53a');a.px(5,7,'#f5da6a');a.rect(4,10,3,1,'#c9a52a');a.rect(9,12,2,2,'#5d9a3c')}); // corn cross
+  T(12,a=>{for(let i=0;i<6;i++){const x=1+i*2+(i%2);a.rect(x,5+(i%3),1,11-(i%3),'#c9b36b');a.rect(x-1,3+(i%3),2,2,'#e2c979');a.px(x,2+(i%3),'#e2c979')}}); // oats cross
+  T(13,a=>{for(let i=0;i<7;i++){const x=1+i*2;a.rect(x,6+(i%3),1,10-(i%3),'#4f8a33')}a.rect(2,3,2,2,'#c95bd1');a.rect(7,1,2,2,'#e8c53a');a.rect(12,4,2,2,'#c95bd1');a.rect(5,8,2,2,'#f0f0f0');a.rect(10,9,2,2,'#e8c53a');a.rect(13,11,2,2,'#e8c53a')}); // prairie flowers cross
+  T(14,a=>{for(let i=0;i<9;i++){const x=floor(a.r()*13),y=6+floor(a.r()*8);a.rect(x,y,3,2,'#3f9a3f');a.rect(x+1,y-1,1,1,'#58b858');a.rect(x+1,y+2,1,2,'#2f7a2f')}}); // cover crop cross
+  T(15,a=>{a.fill('#4a2f1a');a.noise(['#40281600','#553722','#3b2412','#5f3d26'],.5);a.rect(0,2,16,1,'#2e1a0c');a.rect(0,7,16,1,'#2e1a0c');a.rect(0,12,16,1,'#2e1a0c')}); // tilled soil
+  T(16,a=>{a.rect(6,0,4,16,'#7d5c30');a.rect(0,3,16,3,'#a07c48');a.rect(0,9,16,3,'#a07c48');a.rect(6,0,4,1,'#5a3d22');a.rect(0,3,16,1,'#8a6a3c');a.rect(0,9,16,1,'#8a6a3c')}); // fence (cutout)
+  T(17,a=>{a.fill('#a63c2a');for(let y=0;y<16;y+=4){a.rect(0,y+3,16,1,'#d9c7b0');const off=(y/4)%2?4:0;for(let x=off;x<16;x+=8)a.rect(x,y,1,3,'#d9c7b0')}a.noise(['#9a3524','#b34530'],.25)}); // brick
+  T(18,a=>{a.fill('rgba(0,0,0,0)');a.rect(0,0,16,1,'#dfe9f0');a.rect(0,15,16,1,'#dfe9f0');a.rect(0,0,1,16,'#dfe9f0');a.rect(15,0,1,16,'#dfe9f0');a.rect(2,2,1,4,'#ffffff');a.rect(3,2,2,1,'#ffffff');a.rect(1,1,14,14,'rgba(180,220,245,0.35)')}); // glass
+  T(19,a=>{a.fill('#9b9384');a.noise(['#8d8577','#a89f8f','#7f776a','#b5ac9a'],.7)}); // gravel
+  T(20,a=>{a.fill('#9ea4ab');a.noise(['#959ba2','#a8aeb5'],.3);a.rect(0,0,16,1,'#6f757c');a.rect(0,8,16,1,'#6f757c');a.px(2,3,'#6f757c');a.px(13,3,'#6f757c');a.px(2,11,'#6f757c');a.px(13,11,'#6f757c')}); // steel
+  T(21,a=>{a.fill('#d9b64a');for(let y=0;y<16;y++)for(let x=0;x<16;x++)if(a.r()<.5)a.px(x,y,a.r()<.5?'#c9a43c':'#e6c86a');a.rect(0,4,16,1,'#8a6a1c');a.rect(0,11,16,1,'#8a6a1c')}); // hay side
+  T(22,a=>{a.fill('#d9b64a');a.noise(['#c9a43c','#e6c86a','#b8932e'],.6);a.rect(6,6,4,4,'#c9a43c')}); // hay top
+  T(23,a=>{a.fill('#f4f1ea');for(let y=3;y<16;y+=4)a.rect(0,y,16,1,'#c9c3b5')}); // white siding
+  T(24,a=>{a.fill('#8e2f22');for(let y=0;y<16;y+=4){a.rect(0,y+3,16,1,'#5e1c13');const off=(y/4)%2?3:0;for(let x=off;x<16;x+=6)a.rect(x,y,1,3,'#5e1c13')}a.noise(['#9c352a','#7f281d'],.3)}); // red roof
+  T(25,a=>{a.fill('#e5dcc3');a.noise(['#ded4b8','#ece4cf'],.4);a.rect(0,7,16,1,'#b8ae94');a.rect(0,15,16,1,'#b8ae94');a.rect(7,0,1,7,'#b8ae94');a.rect(3,8,1,7,'#b8ae94');a.rect(11,8,1,7,'#b8ae94')}); // limestone
+  T(26,a=>{a.fill('#e0b43a');a.noise(['#d5a52c','#f0c85a','#c99a22'],.5);a.rect(0,0,16,1,'#f7dc8a')}); // gold
+  T(27,a=>{a.fill('#b9b9b4');a.noise(['#b1b1ac','#c2c2bd'],.4);a.rect(0,0,16,1,'#8f8f8a');a.rect(0,0,1,16,'#8f8f8a')}); // concrete
+  T(28,a=>{a.fill('rgba(0,0,0,0)');a.rect(7,9,2,7,'#5a3d22');a.rect(0,0,16,10,'#1a422b');a.rect(1,1,14,8,'#1a422b');a.rect(2,3,4,1,'#ffffff');a.rect(7,3,3,1,'#ffffff');a.rect(11,3,3,1,'#ffffff');a.rect(2,6,3,1,'#e0b43a');a.rect(6,6,4,1,'#e0b43a');a.rect(11,6,3,1,'#e0b43a')}); // IOWA FIRST sign
+  T(29,a=>{for(let i=0;i<8;i++){const x=1+i*2;a.rect(x,4+(i%4),1,12-(i%4),i%2?'#4f8a33':'#5d9a3c')}}); // tall grass cross
+  T(30,a=>{a.rect(7,6,1,10,'#4f8a33');a.rect(5,8,2,1,'#4f8a33');a.rect(5,3,5,4,'#e8c53a');a.rect(6,2,3,1,'#e8c53a');a.rect(6,7,3,1,'#e8c53a');a.rect(7,4,1,2,'#7a4a12')}); // wildflower cross
+  T(31,a=>{a.fill('#8c8c8c');a.noise(['#7f7f7f','#9a9a9a'],.5);const s=[[2,3],[6,6],[11,3],[4,11],[12,11],[8,13]];for(const [x,y] of s){a.rect(x,y,2,2,'#c99a6a');a.px(x,y,'#e0b58a')}}); // iron ore
+  T(32,a=>{a.fill('#5a3d22');a.noise(['#523719','#654427'],.4);a.rect(0,3,16,1,'#3a2611');a.rect(0,7,16,1,'#3a2611');a.rect(0,11,16,1,'#3a2611');a.rect(0,15,16,1,'#3a2611')}); // dark planks
+  T(33,a=>{a.fill('#e8c53a');a.rect(0,0,16,2,'#a63c2a');a.rect(0,14,16,2,'#a63c2a');for(let x=1;x<16;x+=3){a.px(x,0,'#fff6c0');a.px(x,15,'#fff6c0')}a.rect(2,4,3,2,'#1e1a14');a.rect(6,4,4,2,'#1e1a14');a.rect(11,4,3,2,'#1e1a14');a.rect(3,9,10,2,'#1e1a14')}); // marquee
+  T(34,a=>{a.fill('#c0392b');a.rect(2,2,12,7,'#1e1a14');a.rect(3,3,2,2,'#ff3b3b');a.rect(6,3,2,2,'#ffd23b');a.rect(9,3,2,2,'#3bafff');a.rect(12,3,1,2,'#3bff6b');a.rect(3,6,2,2,'#ff7b3b');a.rect(6,6,2,2,'#e13bff');a.rect(9,6,2,2,'#ff3b3b');a.rect(12,6,1,2,'#ffd23b');a.rect(4,11,8,3,'#8a8a8a');a.rect(5,12,6,1,'#1e1a14')}); // vending machine
+  T(35,a=>{a.fill('#2a6a3f');a.rect(0,0,16,3,'#e0b43a');a.rect(0,1,16,1,'#f3d27a');a.rect(2,5,3,3,'#e8382c');a.rect(6,5,3,3,'#e8c53a');a.rect(10,5,4,3,'#7cc043');a.rect(2,10,4,3,'#f0e6c8');a.rect(7,10,3,3,'#e8382c');a.rect(11,10,3,3,'#e8c53a');a.rect(0,14,16,2,'#a07c48')}); // Iowa Fresh stand
+  T(36,a=>{a.fill('rgba(0,0,0,0)');a.rect(7,10,2,6,'#7d5c30');a.rect(0,0,16,11,'#f0f0f0');a.rect(0,0,16,3,'#c0392b');a.rect(2,5,5,1,'#1e1a14');a.rect(9,5,5,1,'#1e1a14');a.rect(2,8,3,1,'#1e1a14');a.rect(7,8,7,1,'#1e1a14')}); // absentee sign
+  T(37,a=>{a.fill('#3a3a3a');a.noise(['#2a2a2a','#4a4a4a','#1e1e1e'],.6)}); // bedrock
+  T(38,a=>{a.fill('#7d5c30');a.rect(0,0,16,1,'#5a3d22');a.rect(0,15,16,1,'#5a3d22');a.rect(0,7,16,2,'#5a3d22');a.rect(6,6,4,4,'#c9a43c');a.rect(7,7,2,2,'#1e1a14');a.rect(2,10,3,3,'#a63c2a');a.rect(11,10,3,3,'#a63c2a')}); // ledger box
+  T(39,a=>{a.fill('#4c4c50');a.noise(['#454549','#545458'],.5);a.rect(0,7,3,2,'#e8c53a');a.rect(6,7,3,2,'#e8c53a');a.rect(12,7,3,2,'#e8c53a')}); // highway
+  T(40,a=>{a.fill('#2f6b2a');a.noise(['#2a5f25','#3a7d33','#245420'],.7);a.rect(3,3,2,2,'#e8382c');a.rect(10,5,2,2,'#e8382c');a.rect(6,10,2,2,'#e8382c');a.rect(12,12,2,2,'#e8382c');for(let i=0;i<6;i++)a.px(floor(a.r()*16),floor(a.r()*16),'rgba(0,0,0,0)')}); // apple leaves
+  T(41,a=>{a.rect(7,8,2,8,'#5d7a2c');a.rect(3,6,4,3,'#6fa53a');a.rect(9,5,4,3,'#6fa53a');a.rect(4,10,3,2,'#6fa53a');a.rect(9,10,4,2,'#6fa53a');a.rect(6,4,4,2,'#7ab547')}); // soybeans cross
+  T(42,a=>{a.fill('#eef2f5');a.rect(0,7,16,1,'#b9c7d2');a.rect(0,15,16,1,'#b9c7d2');a.rect(7,0,1,16,'#b9c7d2');a.rect(2,2,3,3,'#3f8ed8')}); // lab tile
+  T(43,a=>{a.fill('rgba(0,0,0,0)');a.rect(7,10,2,6,'#7d5c30');a.rect(0,0,16,11,'#f4f1ea');a.rect(0,0,16,3,'#1a422b');a.rect(2,5,12,1,'#1a422b');a.rect(2,8,6,1,'#e0b43a');a.rect(10,8,4,1,'#e0b43a')}); // family farm sign
+  T(44,a=>{a.fill('#5c6670');a.rect(3,3,10,10,'#1e1a14');a.rect(5,5,6,6,'#3f8ed8');a.rect(7,3,2,10,'#8a949e');a.rect(3,7,10,2,'#8a949e')}); // cooling intake
+  T(45,a=>{a.fill('#7a5230');a.noise(['#6e4a2b','#8a5d37'],.4);a.rect(0,3,16,2,'#5a3d22');a.rect(0,9,16,2,'#5a3d22');a.rect(3,0,2,16,'#8f8f8a');a.rect(11,0,2,16,'#8f8f8a')}); // railroad
+  T(46,a=>{a.rect(6,0,4,16,'#f4f1ea');a.rect(0,3,16,3,'#f4f1ea');a.rect(0,9,16,3,'#f4f1ea');a.rect(6,0,4,1,'#c9c3b5');a.rect(0,3,16,1,'#dcd6c8');a.rect(0,9,16,1,'#dcd6c8')}); // white fence
+  T(47,a=>{a.fill('#1a422b');a.rect(1,1,14,14,'#2a6a3f');a.rect(3,4,10,2,'#f4f1ea');a.rect(3,8,6,2,'#e0b43a');a.rect(10,8,3,2,'#f4f1ea');a.rect(0,0,1,16,'#7d5c30')}); // rally banner
+  T(48,a=>{a.fill('#1e1e1e');a.rect(2,2,12,12,'#9fc4e3');a.rect(7,2,2,12,'#1e1e1e');a.rect(2,7,12,2,'#1e1e1e');a.rect(3,3,2,3,'#e8f3fb');a.rect(10,10,2,2,'#7fa9cc')}); // dark-framed window
+  T(49,a=>{a.fill('#c9944a');a.noise(['#c48e45','#d19d52','#bf8a42'],.35);for(let y=2;y<16;y+=3){a.rect(0,y,16,1,'#8a5e2a')}a.rect(0,1,16,1,'#dba85e');a.rect(0,4,16,1,'#dba85e');a.rect(0,10,16,1,'#dba85e')}); // cedar siding
+  T(50,a=>{a.fill('#3d3b39');for(let y=0;y<16;y+=4){a.rect(0,y+3,16,1,'#262524');const off=(y/4)%2?3:0;for(let x=off;x<16;x+=6)a.rect(x,y,1,3,'#262524')}a.noise(['#454341','#34322f'],.3)}); // dark shingles
+})();
+
+/* ---------------- world storage helpers ---------------- */
+const dirty=new Set();               // chunk keys needing rebuild
+const CS=16, CX=WX/CS, CZ=WZ/CS;
+const ckey=(cx,cz)=>cx+'_'+cz;
+function markDirty(x,y,z){const cx=floor(x/CS),cz=floor(z/CS);dirty.add(ckey(cx,cz));
+  if(x%CS===0&&cx>0)dirty.add(ckey(cx-1,cz));if(x%CS===CS-1&&cx<CX-1)dirty.add(ckey(cx+1,cz));
+  if(z%CS===0&&cz>0)dirty.add(ckey(cx,cz-1));if(z%CS===CS-1&&cz<CZ-1)dirty.add(ckey(cx,cz+1));}
+const edits=new Map(); // "x,y,z" -> id  (player edits, for saving)
+function setB(x,y,z,v,record){if(!inW(x,y,z))return;blocks[idx(x,y,z)]=v;markDirty(x,y,z);if(record!==false)edits.set(x+','+y+','+z,v)}
+function groundY(x,z){x=clamp(floor(x),0,WX-1);z=clamp(floor(z),0,WZ-1);for(let y=WY-1;y>=0;y--){const b=blocks[idx(x,y,z)];if(BD[b].solid)return y}return 0}
+function surfaceY(x,z){x=clamp(floor(x),0,WX-1);z=clamp(floor(z),0,WZ-1);for(let y=WY-1;y>=0;y--){const b=blocks[idx(x,y,z)];if(b!==B.AIR)return y}return 0}
+
+
+/* ---------------- terrain generation ---------------- */
+const rivers=[]; // polylines {pts:[[x,z]...], w, dirty}
+const PADS=[];   // protected rectangles [x0,z0,x1,z1]
+const inPad=(x,z)=>{for(const p of PADS)if(x>=p[0]&&x<=p[2]&&z>=p[1]&&z<=p[3])return true;return false};
+function riverDist(x,z,rv){let best=1e9;const p=rv.pts;for(let i=0;i<p.length-1;i++){const ax=p[i][0],az=p[i][1],bx=p[i+1][0],bz=p[i+1][1];const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz;let t=l2?((x-ax)*dx+(z-az)*dz)/l2:0;t=clamp(t,0,1);const px=ax+dx*t,pz=az+dz*t;const d=Math.hypot(x-px,z-pz);if(d<best)best=d}return best}
+function wob(pts,amp,seed){const out=[];for(let i=0;i<pts.length-1;i++){const [ax,az]=pts[i],[bx,bz]=pts[i+1];const n=Math.max(2,floor(Math.hypot(bx-ax,bz-az)/6));for(let j=0;j<n;j++){const t=j/n;out.push([lerp(ax,bx,t)+Math.sin((i*7+j)*1.7+seed)*amp,lerp(az,bz,t)+Math.cos((i*5+j)*1.3+seed)*amp*.6])}}out.push(pts[pts.length-1]);return out}
+const LAND=new Uint8Array(WX*WZ); // 1 = land column
+const WDIST=new Float32Array(WX*WZ); // distance to nearest water (capped 6)
+function buildTerrain(){
+  rivers.push({name:'Mississippi',pts:wob([[199,0],[203,30],[206,62],[201,92],[194,116],[186,143]],2.5,1),w:7,dirty:false});
+  rivers.push({name:'Missouri',pts:wob([[16,0],[14,40],[12,70],[20,100],[27,124],[32,143]],2,2),w:6,dirty:false});
+  rivers.push({name:'Iowa River',pts:wob([[132,0],[140,30],[134,56],[133,80],[134,94],[146,106],[160,114],[185,122],[196,124]],2,3),w:3,dirty:true});
+  rivers.push({name:'Des Moines River',pts:wob([[62,0],[80,40],[100,74],[108,96],[114,120],[150,134],[186,143]],2.5,4),w:3,dirty:true});
+  rivers.push({name:'Cedar River',pts:wob([[170,0],[168,34],[174,58],[182,80],[192,100],[188,118]],2,5),w:3,dirty:true});
+  rivers.push({name:'Raccoon River',pts:wob([[36,58],[60,74],[86,90],[106,100]],2,6),w:2,dirty:true});
+  const lakes=[{x:40,z:16,rx:9,ry:5},{x:100,z:82,rx:5,ry:3},{x:60,z:120,rx:6,ry:3}];
+  const H=new Float32Array(WX*WZ);
+  for(let x=0;x<WX;x++)for(let z=0;z<WZ;z++){
+    let h=11+fbm(x,z,4,38)*3.2+fbm(x+500,z,2,9)*.8;
+    const loess=Math.max(0,1-Math.abs(x-30)/14)*Math.max(0,1-Math.abs(z-52)/50);h+=loess*7*(0.6+fbm(x,z+900,3,10)*.5+.5);
+    const drift=Math.max(0,1-Math.hypot((x-200)/30,(z-30)/28));h+=drift*6*(0.5+fbm(x+300,z,3,12)*.5+.5);
+    let water=false,dirtyW=false,dist=9;
+    for(const rv of rivers){const d=riverDist(x,z,rv);if(d<rv.w){water=true;dirtyW=dirtyW||rv.dirty;dist=0}else dist=Math.min(dist,d-rv.w+1)}
+    for(const lk of lakes){const d=Math.hypot((x-lk.x)/lk.rx,(z-lk.z)/lk.ry);if(d<1){water=true;dist=0}else dist=Math.min(dist,(d-1)*Math.min(lk.rx,lk.ry)+1)}
+    const col=x*WZ+z;LAND[col]=water?0:1;WDIST[col]=Math.min(6,dist);
+    if(water)h=SEA-2;else if(dist<4)h=Math.min(h,SEA+dist*.9);
+    H[col]=clamp(Math.round(h),water?SEA-2:SEA+1,WY-8);
+    const dw=dirtyW;
+    const hh=H[col];
+    for(let y=0;y<=hh;y++){let b=B.STONE;if(y===0)b=B.BEDROCK;else if(y===hh)b=water?B.SAND:(hh<=SEA+1?B.SAND:B.GRASS);else if(y>hh-3)b=B.DIRT;else if(hash2(x*3+y,z*5+y)<.03)b=B.IRONORE;blocks[col*WY+y]=b}
+    if(water){for(let y=hh+1;y<=SEA;y++)blocks[col*WY+y]=dw?B.POLLUTED:B.WATER}
+  }
+}
+function roadAt(x,z,type,force){if(!inW(x,0,z))return;if(!force&&inPad(x,z))return;
+  if(LAND[x*WZ+z]===0){setRaw(x,SEA+1,z,B.DARKPLANK);return}
+  const h=groundY(x,z);const top=getB(x,h,z);if(top===B.GRASS||top===B.DIRT||top===B.SAND||top===B.SOIL){setRaw(x,h,z,type);for(let y=h+1;y<h+4;y++)if(BD[getB(x,y,z)].mesh==='cross'||getB(x,y,z)===B.LEAVES)setRaw(x,y,z,B.AIR)}}
+function buildRoads(){
+  for(let x=0;x<WX;x++)for(let z=0;z<WZ;z++){if(x%32===0||z%32===8)roadAt(x,z,B.GRAVEL,false)}
+  for(let x=8;x<216;x++){roadAt(x,100,B.ASPHALT,true);roadAt(x,101,B.ASPHALT,true)}                 // I-80
+  for(let z=4;z<140;z++){roadAt(104,z,B.ASPHALT,true);roadAt(105,z,B.ASPHALT,true)}                 // I-35
+  for(let x=120;x<=199;x++)roadAt(x,59,B.RAIL,true);                                                 // C&NW line through Belle Plaine
+  for(let x=100;x<=200;x++)roadAt(x,63,B.GRAVEL,true);                                                // 74th St
+}
+function tree(x,z,kind){const h=groundY(x,z);const g=getB(x,h,z);if(g!==B.GRASS&&g!==B.DIRT)return;const th=kind==='apple'?3:4+floor(hash2(x,z)*3);const L=kind==='apple'?B.APPLELEAVES:B.LEAVES;
+  for(let y=1;y<=th;y++)setRaw(x,h+y,z,B.LOG);
+  for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)for(let dy=-1;dy<=1;dy++){if(Math.abs(dx)===2&&Math.abs(dz)===2)continue;if(dy===1&&(Math.abs(dx)===2||Math.abs(dz)===2))continue;const px=x+dx,py=h+th+dy,pz=z+dz;if(getB(px,py,pz)===B.AIR)setRaw(px,py,pz,L)}
+  setRaw(x,h+th+2,z,L);}
+const SECTION={};
+function sectionType(x,z){const i=floor(x/32),j=floor((z-8)/32);const k=i+'_'+j;if(SECTION[k]!==undefined)return SECTION[k];const r=hash2(i*13+7,j*29+3);let t='corn';if(r<.20)t='soy';else if(r<.32)t='pasture';else if(r<.38)t='prairie';else if(r<.45)t='timber';SECTION[k]=t;return t}
+function buildFields(){
+  for(let x=1;x<WX-1;x++)for(let z=1;z<WZ-1;z++){
+    if(inPad(x,z))continue;
+    const h=groundY(x,z);if(getB(x,h,z)!==B.GRASS)continue;
+    const col=x*WZ+z;
+    if(WDIST[col]<4){const r=hash2(x*7,z*11);if(r<.08&&x%2===0&&z%2===0)tree(x,z);else if(r<.35)setRaw(x,h+1,z,B.TALLGRASS);else if(r<.4)setRaw(x,h+1,z,B.FLOWER);continue}
+    const mx=x%32,mz=(z-8+32)%32;if(mx<3||mx>29||mz<3||mz>29){if(hash2(x,z)<.15)setRaw(x,h+1,z,B.TALLGRASS);continue}
+    const t=sectionType(x,z);
+    if(t==='corn'){setRaw(x,h,z,B.SOIL);if(x%2===0)setRaw(x,h+1,z,B.CORN)}
+    else if(t==='soy'){setRaw(x,h,z,B.SOIL);if((x+z)%2===0)setRaw(x,h+1,z,B.SOY)}
+    else if(t==='pasture'){const r=hash2(x*5,z*3);if(r<.18)setRaw(x,h+1,z,B.TALLGRASS);else if(r<.22)setRaw(x,h+1,z,B.FLOWER)}
+    else if(t==='prairie'){const r=hash2(x*5,z*3);if(r<.7)setRaw(x,h+1,z,B.PRAIRIE);else if(r<.8)setRaw(x,h+1,z,B.FLOWER);else if(r<.9)setRaw(x,h+1,z,B.TALLGRASS)}
+    else if(t==='timber'){const r=hash2(x*5,z*3);if(r<.06&&x%2&&z%2)tree(x,z);else if(r<.35)setRaw(x,h+1,z,B.TALLGRASS);else if(r<.4)setRaw(x,h+1,z,B.FLOWER)}
+  }
+}
+
+/* ---------------- structures ---------------- */
+function pad(x0,z0,x1,z1,h){PADS.push([x0,z0,x1,z1]);
+  for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++){const col=x*WZ+z;if(LAND[col]===0)continue;const hh=Math.min(h,Math.round(SEA+WDIST[col]*.9));
+    for(let y=0;y<WY;y++){let b;if(y===0)b=B.BEDROCK;else if(y<hh-3)b=B.STONE;else if(y<hh)b=B.DIRT;else if(y===hh)b=hh<=SEA+1?B.SAND:B.GRASS;else b=B.AIR;setRaw(x,y,z,b)}}}
+function box(x0,y0,z0,x1,y1,z1,b,hollow){for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++){if(hollow&&x>x0&&x<x1&&y>y0&&y<y1&&z>z0&&z<z1)continue;setRaw(x,y,z,b)}}
+const fillB=(x0,y0,z0,x1,y1,z1,b)=>box(x0,y0,z0,x1,y1,z1,b,false);
+// hollow building on ground g: walls g+1..g+h, ceiling at g+h, interior floor = ground. door on the given side ('n'=z0,'s'=z1,'w'=x0,'e'=x1) at the middle
+function bld(x0,z0,x1,z1,g,h,wall,ceil,door,win){
+  box(x0,g+1,z0,x1,g+h,z1,wall,true);fillB(x0+1,g+1,z0+1,x1-1,g+1,z1-1,B.AIR);fillB(x0+1,g+2,z0+1,x1-1,g+h-1,z1-1,B.AIR);
+  if(ceil)fillB(x0+1,g+h,z0+1,x1-1,g+h,z1-1,ceil);
+  if(win!==false){for(let x=x0+1;x<x1;x+=2){setRaw(x,g+2,z0,B.GLASS);setRaw(x,g+2,z1,B.GLASS)}for(let z=z0+1;z<z1;z+=2){setRaw(x0,g+2,z,B.GLASS);setRaw(x1,g+2,z,B.GLASS)}}
+  const mx=floor((x0+x1)/2),mz=floor((z0+z1)/2);
+  if(door==='s'){setRaw(mx,g+1,z1,B.AIR);setRaw(mx,g+2,z1,B.AIR)}else if(door==='n'){setRaw(mx,g+1,z0,B.AIR);setRaw(mx,g+2,z0,B.AIR)}
+  else if(door==='w'){setRaw(x0,g+1,mz,B.AIR);setRaw(x0,g+2,mz,B.AIR)}else if(door==='e'){setRaw(x1,g+1,mz,B.AIR);setRaw(x1,g+2,mz,B.AIR)}}
+function pitchedZ(x0,z0,x1,z1,y,roofB,wall){const d=z1-z0+1,half=Math.ceil(d/2);
+  for(let s=0;s<=half;s++){for(let xx=x0-1;xx<=x1+1;xx++){setRaw(xx,y+s,z0-1+s,roofB);setRaw(xx,y+s,z1+1-s,roofB)}
+    if(s>0&&s<half)for(let xx=x0;xx<=x1;xx++)for(let zz=z0+s;zz<=z1-s;zz++)if(getB(xx,y+s-1,zz)===B.AIR)setRaw(xx,y+s-1,zz,wall)}}
+function pitched(x0,z0,x1,z1,y,roofB,wall){const w=x1-x0+1,half=Math.ceil(w/2);
+  for(let s=0;s<=half;s++){for(let zz=z0-1;zz<=z1+1;zz++){setRaw(x0-1+s,y+s,zz,roofB);setRaw(x1+1-s,y+s,zz,roofB)}
+    if(s>0&&s<half)for(let zz=z0;zz<=z1;zz++)for(let xx=x0+s;xx<=x1-s;xx++)if(getB(xx,y+s-1,zz)===B.AIR)setRaw(xx,y+s-1,zz,wall)}}
+function silo(x,z,rad,h,y0){for(let dx=-rad;dx<=rad;dx++)for(let dz=-rad;dz<=rad;dz++){if(dx*dx+dz*dz>rad*rad+rad*.6)continue;for(let y=y0;y<=y0+h;y++)setRaw(x+dx,y,z+dz,B.STEEL)}setRaw(x,y0+h+1,z,B.STEEL)}
+function fenceRect(x0,z0,x1,z1,b,gap){for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++){if(x!==x0&&x!==x1&&z!==z0&&z!==z1)continue;if(gap&&gap(x,z))continue;setRaw(x,groundY(x,z)+1,z,b)}}
+const POI={};
+const poi=(id,x,z,name)=>{POI[id]={x,z,name}};
+const PADDOCK={x0:160,z0:80,x1:170,z1:86};
+const PADDOCK_GAPS=['164,86','165,86','166,86','160,82','160,83','170,83','170,84','163,80','167,80'];
+const FENCE_GAPS=['155,91','156,91','157,91','158,91','159,91'];
+const STAGE={x0:124,z0:115,x1:129,z1:119,y:12};
+function buildStructures(){
+  /* ---- Homeplace: 1254 74th St, Belle Plaine. Laid out from the satellite view: gravel road on the north,
+          horseshoe drive, cedar two-story with the front gable and full porch facing east, white machine shed
+          west, dark barn south, timber to the west, creek (the Cedar) just east. ---- */
+  pad(122,62,171,92,12);
+  // horseshoe drive + south lane to the gate
+  for(let z=64;z<=84;z++){for(const x of [146,160]){setRaw(x,12,z,B.GRAVEL)}}for(let x=146;x<=160;x++)setRaw(x,12,84,B.GRAVEL);for(let z=85;z<=90;z++)setRaw(153,12,z,B.GRAVEL);
+  for(let x=157;x<=159;x++)setRaw(x,12,74,B.GRAVEL);                                     // walk from the porch to the east leg
+  // the house
+  {const x0=150,z0=71,x1=156,z1=77;
+    fillB(x0,13,z0,x1,13,z1,B.PLANK);box(x0,14,z0,x1,19,z1,B.CEDAR,true);fillB(x0+1,14,z0+1,x1-1,14,z1-1,B.AIR);fillB(x0+1,16,z0+1,x1-1,16,z1-1,B.PLANK);
+    setRaw(151,14,76,B.PLANK);setRaw(152,15,76,B.PLANK);setRaw(151,16,76,B.AIR);setRaw(152,16,76,B.AIR);   // stairs up
+    for(const z of [72,76]){for(const y of [14,15,17,18])setRaw(x1,y,z,B.DWINDOW)}for(const z of [73,75]){for(const y of [14,15,17,18])setRaw(x0,y,z,B.DWINDOW)}
+    for(const x of [152,154]){for(const y of [14,15,17,18]){setRaw(x,y,z0,B.DWINDOW);setRaw(x,y,z1,B.DWINDOW)}}
+    setRaw(x1,14,74,B.AIR);setRaw(x1,15,74,B.AIR);                                          // front door, east
+    pitchedZ(x0,z0,x1,z1,19,B.SHINGLE,B.CEDAR);setRaw(x1,20,74,B.DWINDOW);                  // front gable + attic window
+    fillB(157,13,70,158,13,78,B.PLANK);for(const z of [70,72,76,78])fillB(158,14,z,158,15,z,B.PLANK);fillB(157,16,69,159,16,79,B.DARKPLANK);setRaw(159,13,74,B.PLANK); // porch, posts, roof, step
+  }
+  poi('farm',159,74,'Homeplace (the Lahn farm)');
+  bld(139,66,145,72,12,3,B.SIDING,B.SIDING,'e',false);pitched(139,66,145,72,15,B.STEEL,B.SIDING);           // white machine shed
+  bld(146,86,151,90,12,4,B.DARKPLANK,B.DARKPLANK,'n',false);pitched(146,86,151,90,16,B.SHINGLE,B.DARKPLANK);  // barn
+  for(const [x,z] of [[147,88],[148,88],[149,88],[150,88],[147,89],[150,89]])setRaw(x,13,z,B.HAY);setRaw(148,14,88,B.HAY);
+  silo(143,74,1,6,13);                                                                       // grain bin
+  bld(147,80,150,82,12,3,B.DARKPLANK,B.DARKPLANK,'n',false);poi('coop',148,79,'Chicken coop');
+  for(let x=137;x<=145;x++)for(let z=76;z<=90;z++){if(x>=142&&x<=144&&z<=76)continue;setRaw(x,12,z,B.SOIL);setRaw(x,13,z,B.OATS)} // organic oats
+  for(let x=162;x<=170;x+=4)for(let z=70;z<=74;z+=4)tree(x,z,'apple');                    // orchard on the east lawn
+  fenceRect(PADDOCK.x0,PADDOCK.z0,PADDOCK.x1,PADDOCK.z1,B.FENCE,(x,z)=>PADDOCK_GAPS.includes(x+','+z));poi('paddock',165,83,'Grazing paddock');
+  for(let x=122;x<=171;x++){if((x>=155&&x<=159)||x===153)continue;if(LAND[x*WZ+91]===0)continue;setRaw(x,groundY(x,91)+1,91,B.FENCE)}poi('fencegap',157,91,'Broken fence');poi('gate',157,93,'Farm gate (Kayla)');
+  poi('strip',167,66,'Grass airstrip');
+  setRaw(145,13,64,B.SIGN);setRaw(161,13,64,B.SIGN);
+  for(const [x,z] of [[137,64],[140,64],[143,65],[136,68],[137,71],[136,74],[171,88],[168,90]])tree(x,z);
+  for(const [x,z] of [[138,73],[139,73],[138,74]])setRaw(x,13,z,B.IRONORE);                   // scrap iron by the shed
+  // the Wallace place across the creek (they farm the Lahn ground on shares)
+  bld(123,68,129,73,12,3,B.SIDING,B.DARKPLANK,'e');pitched(123,68,129,73,15,B.ROOF,B.SIDING);
+  bld(123,77,128,81,12,3,B.DARKPLANK,B.DARKPLANK,'n',false);pitched(123,77,128,81,15,B.STEEL,B.DARKPLANK);
+  for(let z=64;z<=71;z++)setRaw(131,12,z,B.GRAVEL);setRaw(132,13,64,B.SIGN);poi('wallace',131,71,'Wallace farm');
+  for(const [x,z] of [[122,65],[122,75],[125,85],[129,86],[123,89]])tree(x,z);
+
+  /* ---- Belle Plaine (north of the farm) ---- */
+  pad(140,40,166,60,12);
+  fillB(141,12,49,165,12,50,B.GRAVEL);                                              // Main St
+  bld(142,44,148,48,12,3,B.BRICK,B.CONCRETE,'s');poi('vfw',145,50,'VFW Post');
+  bld(151,44,155,48,12,3,B.SIDING,B.DARKPLANK,'s');pitched(151,44,155,48,15,B.ROOF,B.SIDING);
+  bld(158,44,163,48,12,3,B.SIDING,B.DARKPLANK,'s');poi('locker',160,50,'Belle Plaine Locker');
+  bld(151,52,158,56,12,4,B.BRICK,B.DARKPLANK,'n');fillB(151,15,51,158,15,51,B.MARQUEE);poi('theater',154,50,'King Theater');
+  bld(160,52,164,57,12,3,B.SIDING,B.ROOF,'n');fillB(162,16,54,162,20,54,B.SIDING);poi('church',162,50,'First Church (basement)');
+  bld(141,54,149,57,12,3,B.DARKPLANK,B.ROOF,'n',false);poi('depot',145,52,'C&NW depot');
+  setRaw(141,13,51,B.SIGN);setRaw(165,13,51,B.SIGN);
+
+  /* ---- Cartel silo complex ---- */
+  pad(110,44,130,57,12);for(let x=111;x<=129;x++)for(let z=45;z<=56;z++)setRaw(x,12,z,B.CONCRETE);
+  for(let i=0;i<5;i++)silo(113+i*4,48,1,9,13);
+  bld(112,52,128,56,12,3,B.CONCRETE,B.CONCRETE,'s');
+  for(const [x,z] of [[113,53],[117,53],[121,53],[125,53],[127,55],[114,55]])setRaw(x,13,z,B.LEDGER);
+  poi('cartel',120,58,'Consolidated Ag Inputs HQ');
+
+  /* ---- Des Moines (pad 11 → stand on y=12) ---- */
+  pad(78,102,134,124,11);
+  // Terrace Hill on a knoll, west of the river
+  for(let x=80;x<=92;x++)for(let z=103;z<=112;z++){setRaw(x,12,z,B.GRASS)}
+  bld(82,104,90,110,12,3,B.BRICK,B.DARKPLANK,'s');box(88,16,104,90,22,106,B.BRICK,true);fillB(88,23,104,90,23,106,B.DARKPLANK);setRaw(89,24,105,B.DARKPLANK);
+  fillB(83,13,111,89,13,112,B.PLANK);poi('terracehill',86,113,'Terrace Hill');
+  // school + gym
+  bld(80,116,94,121,11,3,B.BRICK,B.CONCRETE,'s');setRaw(81,12,117,B.VENDING);poi('school',87,123,'Roosevelt Elementary');
+  // Capitol east of the river
+  bld(117,104,131,114,11,5,B.LIMESTONE,B.LIMESTONE,'n');box(120,17,107,128,19,111,B.LIMESTONE,true);
+  for(let dy=0;dy<=4;dy++){const r=[3,3,2,2,1][dy];box(124-r,20+dy,109-r,124+r,20+dy,109+r,B.GOLD,false)}setRaw(124,25,109,B.GOLD);setRaw(124,26,109,B.GOLD);
+  fillB(117,11,102,131,11,103,B.GRAVEL);poi('capitol',124,102,'State Capitol');
+  // fairgrounds + stage pad
+  for(const [x,z] of [[STAGE.x0,STAGE.z0],[STAGE.x1,STAGE.z0],[STAGE.x0,STAGE.z1],[STAGE.x1,STAGE.z1]])setRaw(x,12,z,B.HAY);
+  for(let x=120;x<=134;x++)setRaw(x,groundY(x,122)+1,122,B.WHITEFENCE);poi('fair',126,117,'State Fairgrounds');
+  bld(131,115,134,118,11,3,B.SIDING,B.ROOF,'w',false);                               // pork chop stand
+
+  /* ---- Iowa City lab ---- */
+  pad(170,102,184,111,12);bld(172,104,182,109,12,4,B.LABTILE,B.CONCRETE,'s');poi('lab',177,111,'University of Iowa lab');
+  /* ---- Ames: Iowa State campanile ---- */
+  pad(106,58,120,70,12);bld(108,60,118,66,12,3,B.BRICK,B.CONCRETE,'s');box(112,16,62,114,25,64,B.BRICK,true);fillB(112,26,62,114,26,64,B.LIMESTONE);poi('isu',113,68,'Iowa State University');
+  /* ---- Cedar Rapids data center site ---- */
+  pad(180,44,194,54,12);for(let x=181;x<=193;x++)for(let z=45;z<=53;z++)if(groundY(x,z)===12)setRaw(x,12,z,B.CONCRETE);bld(183,46,191,52,12,3,B.CONCRETE,B.CONCRETE,'s',false);
+  for(const z of [47,50]){for(let x=179;x>=174;x--){if(LAND[x*WZ+z]===1&&LAND[(x-1)*WZ+z]===0){setRaw(x,groundY(x,z)+1,z,B.DRAIN);break}}}poi('datacenter',187,56,'Data center site');
+  /* ---- Hinton (hometown, Loess Hills) ---- */
+  {const g=groundY(33,34);pad(26,29,40,39,g);bld(28,31,34,35,g,3,B.SIDING,B.DARKPLANK,'s');pitched(28,31,34,35,g+3,B.ROOF,B.SIDING);setRaw(37,g+1,37,B.SIGN);poi('hinton',31,38,'Hinton (hometown)')}
+  poi('okoboji',40,23,'Lake Okoboji');
+  /* ---- absentee-owner parcels ---- */
+  [[70,44],[180,30],[60,112],[136,118],[190,84]].forEach((p,i)=>{const [x,z]=p;setRaw(x,groundY(x,z)+1,z,B.ABSENTEE);poi('parcel'+i,x,z,'Absentee-owned parcel')});
+}
+
+/* ---------------- renderer, meshing, sky ---------------- */
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,0.05,220);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight);
+document.getElementById('game').appendChild(renderer.domElement);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+const atlasTex=new THREE.CanvasTexture(ATLAS);atlasTex.magFilter=THREE.NearestFilter;atlasTex.minFilter=THREE.NearestFilter;atlasTex.flipY=false;atlasTex.generateMipmaps=false;
+const matSolid=new THREE.MeshBasicMaterial({map:atlasTex,vertexColors:true});
+const matCut=new THREE.MeshBasicMaterial({map:atlasTex,vertexColors:true,alphaTest:0.5,side:THREE.DoubleSide});
+const matWater=new THREE.MeshBasicMaterial({map:atlasTex,vertexColors:true,transparent:true,opacity:0.72,depthWrite:false});
+scene.fog=new THREE.Fog(0x8fc8f2,40,150);
+const sunLight=new THREE.DirectionalLight(0xffffff,0.9);sunLight.position.set(50,80,30);scene.add(sunLight);
+const ambLight=new THREE.AmbientLight(0xffffff,0.55);scene.add(ambLight);
+
+// face table: dir, corners, tangent axes for AO, shade
+const FACES=[
+ {d:[1,0,0],c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]],sh:.8},
+ {d:[-1,0,0],c:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]],sh:.8},
+ {d:[0,1,0],c:[[0,1,1],[1,1,1],[1,1,0],[0,1,0]],sh:1},
+ {d:[0,-1,0],c:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]],sh:.5},
+ {d:[0,0,1],c:[[1,0,1],[1,1,1],[0,1,1],[0,0,1]],sh:.66},
+ {d:[0,0,-1],c:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]],sh:.66}];
+for(const f of FACES){const [a,b,c]=f.c;const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],v=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];if(n[0]*f.d[0]+n[1]*f.d[1]+n[2]*f.d[2]<0)f.c.reverse();
+  f.t=f.d[1]!==0?[[1,0,0],[0,0,1]]:f.d[0]!==0?[[0,0,1],[0,1,0]]:[[1,0,0],[0,1,0]];}
+const TS=1/16;
+const TIN=0.6/256;function tileUV(t,u,v){return [(t%16)*TS+TIN+u*(TS-2*TIN),floor(t/16)*TS+TIN+v*(TS-2*TIN)]}
+const chunks=new Map();
+function buildChunk(cx,cz){
+  const key=ckey(cx,cz);let ch=chunks.get(key);
+  if(!ch){ch={meshes:{}};chunks.set(key,ch)}
+  const bufs={solid:{p:[],u:[],c:[]},cut:{p:[],u:[],c:[]},water:{p:[],u:[],c:[]}};
+  const x0=cx*CS,z0=cz*CS;
+  const opq=(x,y,z)=>isOpaque(getB(x,y,z))?1:0;
+  for(let x=x0;x<x0+CS;x++)for(let z=z0;z<z0+CS;z++){
+    const base=(x*WZ+z)*WY;
+    for(let y=0;y<WY;y++){
+      const b=blocks[base+y];if(b===B.AIR)continue;const d=BD[b];
+      if(d.mesh==='cross'){const bf=bufs.cut;const t=d.tex[0];const br=0.82+hash2(x*7+y,z*13)*0.12;
+        const quads=[[[0,0,0],[1,0,1],[1,1,1],[0,1,0]],[[1,0,0],[0,0,1],[0,1,1],[1,1,0]]];
+        for(const q of quads){const uv=[[0,1],[1,1],[1,0],[0,0]];const P=q.map((p,i)=>({p:[x+p[0],y+p[1],z+p[2]],uv:tileUV(t,uv[i][0],uv[i][1])}));
+          for(const i of [0,1,2,0,2,3]){bf.p.push(...P[i].p);bf.u.push(...P[i].uv);bf.c.push(br,br,br)}}
+        continue}
+      if(d.mesh==='water'){const bf=bufs.water;const t=d.tex[0];
+        for(const f of FACES){const nx=x+f.d[0],ny=y+f.d[1],nz=z+f.d[2];const nb=getB(nx,ny,nz);if(isWater(nb)||isOpaque(nb))continue;if(f.d[1]===-1)continue;
+          const top=!isWater(getB(x,y+1,z));const sh=f.sh*(0.9+0.1*hash2(x,z));
+          const P=f.c.map(c=>{const py=y+(c[1]===1&&top?0.85:c[1]);let u,v;if(f.d[1]!==0){u=c[0];v=c[2]}else{u=f.d[0]!==0?c[2]:c[0];v=1-c[1]}return {p:[x+c[0],py,z+c[2]],uv:tileUV(t,u,v)}});
+          for(const i of [0,1,2,0,2,3]){bf.p.push(...P[i].p);bf.u.push(...P[i].uv);bf.c.push(sh,sh,sh)}}
+        continue}
+      // cube
+      const bf=d.opaque?bufs.solid:bufs.cut;
+      for(let fi=0;fi<6;fi++){const f=FACES[fi];const nx=x+f.d[0],ny=y+f.d[1],nz=z+f.d[2];const nb=getB(nx,ny,nz);
+        if(isOpaque(nb))continue;if(!d.opaque&&nb===b)continue;
+        const t=f.d[1]===1?d.tex[0]:f.d[1]===-1?d.tex[2]:d.tex[1];
+        const P=f.c.map(c=>{let u,v;if(f.d[1]!==0){u=c[0];v=c[2]}else{u=f.d[0]!==0?c[2]:c[0];v=1-c[1]}
+          // ambient occlusion
+          const s1=c[f.t[0][0]?0:f.t[0][1]?1:2]?1:-1,s2=c[f.t[1][0]?0:f.t[1][1]?1:2]?1:-1;
+          const t1=f.t[0],t2=f.t[1];
+          const a1=opq(nx+t1[0]*s1,ny+t1[1]*s1,nz+t1[2]*s1),a2=opq(nx+t2[0]*s2,ny+t2[1]*s2,nz+t2[2]*s2),a3=opq(nx+t1[0]*s1+t2[0]*s2,ny+t1[1]*s1+t2[1]*s2,nz+t1[2]*s1+t2[2]*s2);
+          const ao=(a1&&a2)?0:3-(a1+a2+a3);const br=f.sh*(0.58+0.14*ao);
+          return {p:[x+c[0],y+c[1],z+c[2]],uv:tileUV(t,u,v),br}});
+        // flip quad diagonal for nicer AO
+        const order=(P[0].br+P[2].br)>=(P[1].br+P[3].br)?[0,1,2,0,2,3]:[1,2,3,1,3,0];
+        for(const i of order){bf.p.push(...P[i].p);bf.u.push(...P[i].uv);bf.c.push(P[i].br,P[i].br,P[i].br)}}
+    }
+  }
+  for(const k of ['solid','cut','water']){const bf=bufs[k];let m=ch.meshes[k];
+    if(m){m.geometry.dispose();scene.remove(m);ch.meshes[k]=null}
+    if(!bf.p.length)continue;
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(bf.p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(bf.u,2));g.setAttribute('color',new THREE.Float32BufferAttribute(bf.c,3));g.computeBoundingSphere();
+    m=new THREE.Mesh(g,k==='solid'?matSolid:k==='cut'?matCut:matWater);m.frustumCulled=true;if(k==='water')m.renderOrder=2;scene.add(m);ch.meshes[k]=m}
+}
+function rebuildDirty(limit){let n=0;for(const key of dirty){const [cx,cz]=key.split('_').map(Number);buildChunk(cx,cz);dirty.delete(key);if(++n>=limit)break}}
+
+/* ---------------- sky & time ---------------- */
+const skyDay=new THREE.Color(0x8fc8f2),skyDusk=new THREE.Color(0xe8a068),skyNight=new THREE.Color(0x0d1630);
+const DAYLEN=480; // seconds per day
+let dayTime=0.28;  // 0=midnight, .5=noon
+const sunGeo=new THREE.SphereGeometry(4,8,8);
+const sun=new THREE.Mesh(sunGeo,new THREE.MeshBasicMaterial({color:0xfff2a8,fog:false}));scene.add(sun);
+const moon=new THREE.Mesh(new THREE.SphereGeometry(2.6,8,8),new THREE.MeshBasicMaterial({color:0xdfe6ff,fog:false}));scene.add(moon);
+const stars=(()=>{const g=new THREE.BufferGeometry();const p=[];for(let i=0;i<500;i++){const t=Math.random()*Math.PI*2,u=Math.random()*2-1,r=190;p.push(r*Math.sqrt(1-u*u)*Math.cos(t),Math.abs(r*u)+10,r*Math.sqrt(1-u*u)*Math.sin(t))}g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));const m=new THREE.PointsMaterial({color:0xffffff,size:1.4,fog:false,transparent:true,opacity:0});const pts=new THREE.Points(g,m);scene.add(pts);return pts})();
+const clouds=[];(()=>{const m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.85});for(let i=0;i<26;i++){const w=6+Math.random()*10,d=4+Math.random()*6;const c=new THREE.Mesh(new THREE.BoxGeometry(w,1,d),m);c.position.set(Math.random()*WX,34+Math.random()*3,Math.random()*WZ);scene.add(c);clouds.push(c)}})();
+const _c=new THREE.Color();const bgColor=new THREE.Color(0x8fc8f2);scene.background=bgColor;
+function updateSky(dt){
+  dayTime=(dayTime+dt/DAYLEN)%1;
+  const s=Math.sin(dayTime*Math.PI*2-Math.PI/2); // -1 midnight .. 1 noon
+  let light,col=_c;
+  if(s>0.15){light=0.75+0.25*s;col.copy(skyDay)}
+  else if(s>-0.15){const t=(s+0.15)/0.3;light=lerp(0.28,0.79,t);col.copy(skyNight).lerp(skyDusk,Math.min(1,t*1.6)).lerp(skyDay,Math.max(0,t*2-1))}
+  else{light=0.28;col.copy(skyNight)}
+  bgColor.copy(col);scene.fog.color.copy(col);
+  matSolid.color.setRGB(light,light,light*1.03);matCut.color.copy(matSolid.color);matWater.color.copy(matSolid.color);
+  ambLight.intensity=0.35+0.35*light;sunLight.intensity=0.2+0.9*Math.max(0,s);
+  const ang=dayTime*Math.PI*2-Math.PI/2;const px=camera.position.x,pz=camera.position.z;
+  sun.position.set(px+Math.cos(ang)*160,Math.sin(ang)*160,pz-40);moon.position.set(px-Math.cos(ang)*160,-Math.sin(ang)*160,pz+40);
+  stars.position.set(px,0,pz);stars.material.opacity=clamp((0.1-s)*3,0,1);
+  for(const c of clouds){c.position.x+=dt*0.6;if(c.position.x>WX+20)c.position.x=-20}
+  return light;
+}
+const isNight=()=>Math.sin(dayTime*Math.PI*2-Math.PI/2)<-0.05;
+
+/* ---------------- voxel raycast (DDA) ---------------- */
+function raycast(ox,oy,oz,dx,dy,dz,maxD,pred){
+  let x=floor(ox),y=floor(oy),z=floor(oz);
+  const sx=dx>0?1:-1,sy=dy>0?1:-1,sz=dz>0?1:-1;
+  const tdx=Math.abs(1/(dx||1e-9)),tdy=Math.abs(1/(dy||1e-9)),tdz=Math.abs(1/(dz||1e-9));
+  let tx=((sx>0?x+1-ox:ox-x))*tdx,ty=((sy>0?y+1-oy:oy-y))*tdy,tz=((sz>0?z+1-oz:oz-z))*tdz;
+  let face=[0,0,0],t=0;
+  for(let i=0;i<maxD*3+8;i++){
+    const b=getB(x,y,z);
+    if(b!==B.AIR&&pred(b))return {x,y,z,b,face,dist:t};
+    if(tx<ty&&tx<tz){x+=sx;t=tx;tx+=tdx;face=[-sx,0,0]}else if(ty<tz){y+=sy;t=ty;ty+=tdy;face=[0,-sy,0]}else{z+=sz;t=tz;tz+=tdz;face=[0,0,-sz]}
+    if(t>maxD)break;
+  }
+  return null;
+}
+const solidPred=b=>BD[b].mesh!=='water';
+const anyPred=b=>true;
+
+/* ---------------- models ---------------- */
+function lambert(col,tex){const m=new THREE.MeshLambertMaterial({color:col});if(tex)m.map=tex;return m}
+function texFromPainter(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');fn(g,w,h);const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;return t}
+const plaidTex=texFromPainter(8,8,(g)=>{g.fillStyle='#b8352a';g.fillRect(0,0,8,8);g.fillStyle='#7a1f18';for(let i=0;i<8;i+=4){g.fillRect(i,0,1,8);g.fillRect(0,i,8,1)}g.fillStyle='#e0b43a';g.fillRect(2,0,1,8);g.fillRect(0,2,8,1)});
+const cowTex=texFromPainter(8,8,(g)=>{g.fillStyle='#f4efe6';g.fillRect(0,0,8,8);g.fillStyle='#2a2320';g.fillRect(0,0,3,3);g.fillRect(5,2,3,3);g.fillRect(1,5,2,3);g.fillRect(6,6,2,2)});
+function bx(w,h,d,mat,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);return m}
+function humanoid(o){ // o: skin, shirt(mat), pants, hat color, hair
+  const g=new THREE.Group();const skin=lambert(o.skin||0xe8b890),shirt=o.shirt||lambert(o.shirtCol||0x5577aa),pants=lambert(o.pants||0x3b4e7a),shoe=lambert(0x4a3020);
+  const head=bx(.5,.5,.5,skin,0,1.55,0);g.add(head);
+  const hair=bx(.52,.16,.52,lambert(o.hair||0x3a2a1a),0,1.74,0);g.add(hair);
+  if(o.hat){const h=bx(.56,.14,.56,lambert(o.hat),0,1.86,0);g.add(h);const brim=bx(.3,.05,.3,lambert(o.hat),0,1.8,-.36);g.add(brim)}
+  const eyeM=lambert(0x222222);g.add(bx(.08,.08,.04,eyeM,-.12,1.58,-.26));g.add(bx(.08,.08,.04,eyeM,.12,1.58,-.26));
+  const body=bx(.5,.7,.26,shirt,0,.95,0);g.add(body);
+  const la=bx(.2,.68,.22,shirt,-.36,.94,0),ra=bx(.2,.68,.22,shirt,.36,.94,0);la.geometry.translate(0,-.28,0);ra.geometry.translate(0,-.28,0);la.position.y=ra.position.y=1.26;g.add(la,ra);
+  const ll=bx(.22,.62,.24,pants,-.13,.31,0),rl=bx(.22,.62,.24,pants,.13,.31,0);ll.geometry.translate(0,-.3,0);rl.geometry.translate(0,-.3,0);ll.position.y=rl.position.y=.62;g.add(ll,rl);
+  g.add(bx(.24,.12,.28,shoe,-.13,.06,.02),bx(.24,.12,.28,shoe,.13,.06,.02));
+  g.userData.limbs={la,ra,ll,rl};return g;}
+function animateLimbs(g,phase,amp){const L=g.userData.limbs;if(!L)return;const s=Math.sin(phase)*amp;L.la.rotation.x=s;L.ra.rotation.x=-s;L.ll.rotation.x=-s;L.rl.rotation.x=s}
+function cowModel(){const g=new THREE.Group();const m=lambert(0xffffff,cowTex);g.add(bx(1.3,.75,.8,m,0,.85,0));const head=bx(.5,.5,.45,m,0,1.05,-.85);g.add(head);g.add(bx(.35,.12,.12,lambert(0xf0d0c0),0,.92,-1.1));
+  for(const [x,z] of [[-.4,-.4],[.4,-.4],[-.4,.4],[.4,.4]])g.add(bx(.22,.5,.22,lambert(0xf4efe6),x,.25,z));
+  const collar=bx(.6,.14,.55,lambert(0xff7a1a),0,1.02,-.55);collar.visible=false;g.add(collar);g.userData.collar=collar;return g}
+const slimeMat=new THREE.MeshLambertMaterial({color:0x6f7a2a,transparent:true,opacity:.85});
+function slimeModel(){const g=new THREE.Group();const b=bx(.9,.9,.9,slimeMat,0,.45,0);g.add(b);const e=lambert(0x1e1a14);g.add(bx(.14,.14,.06,e,-.2,.6,-.45),bx(.14,.14,.06,e,.2,.6,-.45));g.userData.body=b;return g}
+function planeModel(){const g=new THREE.Group();const y=lambert(0xf2c31b),d=lambert(0x2b2b2b),r=lambert(0xa63c2a);
+  g.add(bx(.9,.9,3.2,y,0,.9,0));g.add(bx(.5,.5,1,y,0,1.4,1.7));g.add(bx(5.6,.12,1.2,y,0,1.55,-.2));g.add(bx(.12,1,.9,r,0,1.9,1.9));g.add(bx(2,.1,.7,y,0,1.35,1.9));
+  g.add(bx(.7,.7,.3,d,0,.9,-1.75));const prop=bx(.12,1.8,.08,d,0,.9,-1.95);g.add(prop);g.userData.prop=prop;
+  g.add(bx(.25,.4,.4,d,-.6,.2,-.5),bx(.25,.4,.4,d,.6,.2,-.5),bx(.2,.3,.3,d,0,.15,1.6));g.add(bx(.7,.5,.6,lambert(0x8fc8f2),0,1.35,-.8));
+  return g}
+function nameSprite(text,color,nobox){const c=document.createElement('canvas');c.width=256;c.height=64;const g=c.getContext('2d');g.font='bold '+(nobox?'52px':'30px')+' "VT323",monospace';g.textAlign='center';if(!nobox){g.fillStyle='rgba(0,0,0,.55)';const w=g.measureText(text).width+24;g.fillRect(128-w/2,8,w,44)}else{g.lineWidth=6;g.strokeStyle='#1e1a14';g.strokeText(text,128,48)}g.fillStyle=color||'#fff';g.fillText(text,128,nobox?48:40);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:true}));s.scale.set(1.8,.45,1);return s}
+
+/* ---------------- entities ---------------- */
+const cows=[],slimes=[],npcs=[];
+const P={x:150.5,y:14,z:75.5,vx:0,vy:0,vz:0,yaw:Math.PI,pitch:-0.1,onGround:false,hp:10,food:10,inWater:false,flying:false,sprint:false,third:false,dead:false};
+const playerModel=humanoid({skin:0xe8b890,shirt:lambert(0xffffff,plaidTex),pants:0x3b4e7a,hat:0x1a422b,hair:0x3a2a1a});playerModel.visible=false;scene.add(playerModel);
+const plane={x:141,y:13,z:74.5,yaw:Math.PI/2,model:planeModel()};scene.add(plane.model);
+function spawnCow(x,z,collared){const c={x,y:groundY(x,z)+1,z,vx:0,vy:0,vz:0,yaw:Math.random()*6.28,t:Math.random()*3,collared:!!collared,model:cowModel()};scene.add(c.model);c.model.userData.collar.visible=c.collared;cows.push(c);return c}
+function spawnSlime(x,y,z){const s={x,y,z,vx:0,vy:0,vz:0,hp:3,t:Math.random(),model:slimeModel(),hit:0};scene.add(s.model);slimes.push(s);return s}
+function addNPC(id,name,x,z,o){const m=humanoid(o||{});const y=groundY(x,z)+1;m.position.set(x,y,z);m.rotation.y=o&&o.face!==undefined?o.face:0;scene.add(m);const tag=nameSprite(name);tag.position.set(0,2.35,0);m.add(tag);const mark=nameSprite('!','#e0b43a',true);mark.scale.set(.6,.6,1);mark.position.set(0,2.85,0);mark.visible=false;m.add(mark);
+  const n={id,name,x,y,z,model:m,tag,mark,lines:o.lines||[],face:o.face||0};npcs.push(n);return n}
+
+// entity AABB collision helper (w = width, h = height), moves and resolves per axis
+function moveEntity(e,w,h,dt,gravity){
+  e.vy-=(gravity===undefined?28:gravity)*dt;if(e.vy<-40)e.vy=-40;
+  const hw=w/2;
+  const solidAt=(x0,y0,z0,x1,y1,z1)=>{for(let x=floor(x0);x<=floor(x1-1e-4);x++)for(let y=floor(y0);y<=floor(y1-1e-4);y++)for(let z=floor(z0);z<=floor(z1-1e-4);z++)if(isSolid(x,y,z))return true;return false};
+  // x
+  let nx=e.x+e.vx*dt;if(solidAt(nx-hw,e.y+.02,e.z-hw,nx+hw,e.y+h,e.z+hw)){e.vx=0;e.blocked=true}else e.x=nx;
+  let nz=e.z+e.vz*dt;if(solidAt(e.x-hw,e.y+.02,nz-hw,e.x+hw,e.y+h,nz+hw)){e.vz=0;e.blocked=true}else e.z=nz;
+  let ny=e.y+e.vy*dt;e.onGround=false;
+  if(e.vy<=0){if(solidAt(e.x-hw,ny,e.z-hw,e.x+hw,ny+h,e.z+hw)){e.y=floor(ny)+1+1e-3;const fall=-e.vy;e.vy=0;e.onGround=true;return fall}else e.y=ny}
+  else{if(solidAt(e.x-hw,ny,e.z-hw,e.x+hw,ny+h,e.z+hw)){e.vy=0}else e.y=ny}
+  e.x=clamp(e.x,1.5,WX-1.5);e.z=clamp(e.z,1.5,WZ-1.5);if(e.y<1)e.y=1;
+  return 0;}
+
+/* ---------------- particles ---------------- */
+const PMAX=400,parts=[];const pGeo=new THREE.BufferGeometry();const pPos=new Float32Array(PMAX*3),pCol=new Float32Array(PMAX*3);
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));pGeo.setAttribute('color',new THREE.BufferAttribute(pCol,3));
+const pPts=new THREE.Points(pGeo,new THREE.PointsMaterial({size:.22,vertexColors:true,sizeAttenuation:true}));pPts.frustumCulled=false;scene.add(pPts);
+function puff(x,y,z,col,n,spd){const c=new THREE.Color(col);for(let i=0;i<n;i++){if(parts.length>=PMAX)parts.shift();parts.push({x,y,z,vx:(Math.random()-.5)*spd,vy:Math.random()*spd*.9+1,vz:(Math.random()-.5)*spd,life:.6+Math.random()*.6,r:c.r*(0.7+Math.random()*.3),g:c.g*(0.7+Math.random()*.3),b:c.b*(0.7+Math.random()*.3)})}}
+function updateParticles(dt){let n=0;for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=dt;if(p.life<=0){parts.splice(i,1);continue}p.vy-=12*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;if(isSolid(floor(p.x),floor(p.y),floor(p.z))){p.vy=0;p.vx*=.5;p.vz*=.5;p.y=floor(p.y)+1.01}pPos[n*3]=p.x;pPos[n*3+1]=p.y;pPos[n*3+2]=p.z;pCol[n*3]=p.r;pCol[n*3+1]=p.g;pCol[n*3+2]=p.b;n++}
+  pGeo.setDrawRange(0,n);pGeo.attributes.position.needsUpdate=true;pGeo.attributes.color.needsUpdate=true}
+function blockColor(b){const t=BD[b].tex[1];const c=ATLAS.getContext('2d',{willReadFrequently:true}).getImageData((t%16)*16+8,floor(t/16)*16+8,1,1).data;return (c[0]<<16)|(c[1]<<8)|c[2]}
+
+/* ---------------- highlight box ---------------- */
+const hl=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002,1.002,1.002)),new THREE.LineBasicMaterial({color:0x111111,transparent:true,opacity:.7}));hl.visible=false;scene.add(hl);
+
+/* ---------------- input ---------------- */
+const keys={};let mouseDown=[false,false,false];let locked=false;
+const touch={on:false,mx:0,mz:0,jump:false,mine:false};
+const canvas=renderer.domElement;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===canvas;if(!locked&&G.state==='play'&&!touch.on)openPanel('pause')});
+canvas.addEventListener('mousedown',e=>{if(G.state!=='play')return;if(!locked&&!touch.on){try{canvas.requestPointerLock()}catch(x){}return}mouseDown[e.button]=true;if(e.button===0)onAttack();if(e.button===2)onUse()});
+addEventListener('mouseup',e=>{mouseDown[e.button]=false;if(e.button===0)mining=null});
+addEventListener('mousemove',e=>{if(!locked||G.state!=='play')return;P.yaw-=e.movementX*0.0024;P.pitch=clamp(P.pitch-e.movementY*0.0024,-1.52,1.52)});
+addEventListener('wheel',e=>{if(G.state!=='play')return;G.sel=(G.sel+(e.deltaY>0?1:-1)+9)%9;drawHotbar()},{passive:true});
+addEventListener('keydown',e=>{if(e.repeat)return;keys[e.code]=true;
+  if(G.state==='play'){
+    if(e.code==='Escape'){}
+    else if(e.code==='KeyE'){e.preventDefault();onInteract()}
+    else if(e.code==='KeyJ'){openPanel('journal')}
+    else if(e.code==='KeyQ'){cycleTracked()}
+    else if(e.code==='KeyM'){G.minimap=!G.minimap;document.getElementById('minimap').style.display=G.minimap?'':'none'}
+    else if(e.code==='F5'){e.preventDefault();P.third=!P.third}
+    else if(e.code.startsWith('Digit')){const n=parseInt(e.code.slice(5));if(n>=1&&n<=9){G.sel=n-1;drawHotbar()}}
+  } else if(G.state==='dialog'){if(e.code==='KeyE'||e.code==='Space'||e.code==='Enter'){e.preventDefault();dialogNext()}if(e.code==='Escape')closeDialog()}
+  else if(G.state==='panel'){if(G.panel==='dead'){if(e.code==='Enter'||e.code==='Space')document.getElementById('btnRespawn').click();return}if(e.code==='Escape'||e.code==='KeyE'&&G.panel==='inv'||e.code==='KeyJ'&&G.panel==='journal'){e.preventDefault();closePanel()}}
+});
+addEventListener('keyup',e=>{keys[e.code]=false});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouseDown=[false,false,false]});
+// touch controls
+(function(){
+  const T=document.getElementById('touch');const joy=document.getElementById('joy'),knob=document.getElementById('knob'),look=document.getElementById('look');
+  let jid=null,jc={x:0,y:0};let lid=null,lx=0,ly=0;
+  const enable=()=>{if(touch.on)return;touch.on=true;T.classList.add('on')};
+  addEventListener('touchstart',enable,{passive:true,once:true});
+  joy.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];jid=t.identifier;const r=joy.getBoundingClientRect();jc={x:r.left+r.width/2,y:r.top+r.height/2};upd(t)},{passive:false});
+  const upd=t=>{let dx=t.clientX-jc.x,dy=t.clientY-jc.y;const r=joy.getBoundingClientRect();const base=r.width/2-25;const d=Math.hypot(dx,dy),m=r.width*.4;if(d>m){dx*=m/d;dy*=m/d}knob.style.left=(base+dx)+'px';knob.style.top=(base+dy)+'px';touch.mx=dx/m;touch.mz=dy/m;if(Math.hypot(touch.mx,touch.mz)<.2){touch.mx=touch.mz=0}};
+  joy.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===jid)upd(t)},{passive:false});
+  const jend=e=>{for(const t of e.changedTouches)if(t.identifier===jid){jid=null;touch.mx=touch.mz=0;const r=joy.getBoundingClientRect();knob.style.left=(r.width/2-25)+'px';knob.style.top=(r.width/2-25)+'px'}};
+  joy.addEventListener('touchend',jend);joy.addEventListener('touchcancel',jend);
+  look.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];lid=t.identifier;lx=t.clientX;ly=t.clientY},{passive:false});
+  look.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===lid){P.yaw-=(t.clientX-lx)*0.006;P.pitch=clamp(P.pitch-(t.clientY-ly)*0.006,-1.52,1.52);lx=t.clientX;ly=t.clientY}},{passive:false});
+  const lend=e=>{for(const t of e.changedTouches)if(t.identifier===lid)lid=null};look.addEventListener('touchend',lend);look.addEventListener('touchcancel',lend);
+  const hold=(id,on,off)=>{const el=document.getElementById(id);el.addEventListener('touchstart',e=>{e.preventDefault();el.classList.add('held');on()},{passive:false});const f=e=>{e.preventDefault();el.classList.remove('held');off&&off()};el.addEventListener('touchend',f,{passive:false});el.addEventListener('touchcancel',f,{passive:false})};
+  hold('tJump',()=>{touch.jump=true},()=>{touch.jump=false});
+  hold('tMine',()=>{if(G.state!=='play')return;mouseDown[0]=true;onAttack()},()=>{mouseDown[0]=false;mining=null});
+  hold('tPlace',()=>{if(G.state!=='play')return;mouseDown[2]=true;onUse()},()=>{mouseDown[2]=false});
+  hold('tUse',()=>{if(G.state==='play')onInteract();else if(G.state==='dialog')dialogNext()});
+  hold('tSprint',()=>{P.sprint=!P.sprint;document.getElementById('tSprint').classList.toggle('held',P.sprint)});
+  hold('tInv',()=>{if(G.state==='play')openPanel('inv');else if(G.panel==='inv')closePanel()});
+  hold('tJournal',()=>{if(G.state==='play')openPanel('journal');else if(G.panel==='journal')closePanel()});
+  hold('tView',()=>{P.third=!P.third});
+  hold('tPause',()=>{if(G.state==='play')openPanel('pause')});
+})();
+
+/* ---------------- game state ---------------- */
+ITEMS.porkchop={name:'Pork chop on a stick',emoji:'🍖',food:5,desc:'State Fair. Two oats at Bev\'s stand.'};ITEMS.popcorn={name:'King Theatre popcorn',emoji:'🍿',food:3,desc:'Popped from Iowa sweet corn at the King.'};
+const G={state:'loading',panel:null,sel:0,inv:new Map(),hotbar:new Array(9).fill(null),trust:0,tracked:null,minimap:true,pollutedTotal:1,polluted:0,quests:{},flags:{},parcels:0,signsPlaced:0,plantings:0,ledgers:0,listened:{},vouchersGiven:0,kidsStayed:0,crashAt:0,day:1,lastSave:0,eggsAt:0,creditTimer:0,slimeTimer:0,questTimer:0,hudDirty:true,rallyCrowd:[],ended:false,playedSince:0,lastQuote:''};
+let mining=null,now=0;
+const pollutedList=[];
+function indexWater(){pollutedList.length=0;let n=0;for(let x=0;x<WX;x++)for(let z=0;z<WZ;z++){const base=(x*WZ+z)*WY;for(let y=SEA-3;y<=SEA;y++)if(blocks[base+y]===B.POLLUTED){pollutedList.push([x,y,z]);n++}}G.polluted=n;if(!G.flags.loaded)G.pollutedTotal=Math.max(1,n)}
+const cleanPct=()=>clamp(Math.round(100*(1-G.polluted/G.pollutedTotal)),0,100);
+
+/* ---------------- inventory ---------------- */
+const count=id=>G.inv.get(id)||0;
+function addItem(id,n){n=n||1;G.inv.set(id,count(id)+n);if(!G.hotbar.includes(id)){const i=G.hotbar.indexOf(null);if(i>=0)G.hotbar[i]=id}drawHotbar();showItemName(ITEMS[id].name+' +'+n)}
+function removeItem(id,n){n=n||1;const c=count(id)-n;if(c<=0){G.inv.delete(id);const i=G.hotbar.indexOf(id);if(i>=0)G.hotbar[i]=null}else G.inv.set(id,c);drawHotbar()}
+const hasAll=req=>Object.keys(req).every(k=>count(k)>=req[k]);
+const selItem=()=>G.hotbar[G.sel];
+const iconCache={};
+function iconFor(id,size){const it=ITEMS[id];if(it.block!==undefined){const c=document.createElement('canvas');c.width=c.height=16;const g=c.getContext('2d');const t=BD[it.block].tex[1];g.drawImage(ATLAS,(t%16)*16,floor(t/16)*16,16,16,0,0,16,16);if(BD[it.block].mesh==='cube'&&BD[it.block].tex[0]!==t){const t0=BD[it.block].tex[0];g.globalAlpha=.45;g.drawImage(ATLAS,(t0%16)*16,floor(t0/16)*16,16,16,0,0,16,6);g.globalAlpha=1}return c}
+  const s=document.createElement('span');s.className='emo';s.textContent=it.emoji;return s}
+function drawHotbar(){const hb=document.getElementById('hotbar');if(!hb.children.length){for(let i=0;i<9;i++){const d=document.createElement('div');d.className='slot';d.innerHTML='<span class="k">'+(i+1)+'</span><span class="ic"></span><span class="n"></span>';d.addEventListener('click',()=>{G.sel=i;drawHotbar()});hb.appendChild(d)}}
+  for(let i=0;i<9;i++){const d=hb.children[i];d.classList.toggle('sel',i===G.sel);const id=G.hotbar[i];const ic=d.querySelector('.ic');const n=d.querySelector('.n');ic.innerHTML='';if(id){ic.appendChild(iconFor(id));n.textContent=count(id)>1?count(id):''}else n.textContent=''}
+  const id=selItem();if(id)showItemName(ITEMS[id].name)}
+let itemNameT=null;function showItemName(t){const el=document.getElementById('itemname');el.textContent=t;el.style.opacity=1;clearTimeout(itemNameT);itemNameT=setTimeout(()=>el.style.opacity=0,1600)}
+
+/* ---------------- UI panels ---------------- */
+function openPanel(id){G.panel=id;G.state='panel';document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id===id));if(id==='inv')renderInv();if(id==='journal')renderJournal();if(id==='pause')document.getElementById('pauseSub').textContent='Day '+G.day+' · Trust '+G.trust+'% · Clean water '+cleanPct()+'%';
+  if(document.pointerLockElement)document.exitPointerLock()}
+function closePanel(){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));G.panel=null;G.state='play';if(!touch.on){try{canvas.requestPointerLock()}catch(x){}}}
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>{if(G.panel==='help'&&G.flags.fromTitle){G.flags.fromTitle=false;showTitle();return}if(G.panel==='journal'&&G.flags.fromTitle){G.flags.fromTitle=false;showTitle();return}closePanel()}));
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{const card=b.closest('.card');card.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));card.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+b.dataset.tab))}));
+function toast(msg,ms){const box=document.getElementById('toasts');const old=box.querySelectorAll('.toast:not(.q)');if(old.length>=3)old[0].remove();const d=document.createElement('div');d.className='toast';d.textContent=msg;box.appendChild(d);setTimeout(()=>d.remove(),ms||3200)}
+function showQuote(q){if(!q)return;const box=document.getElementById('toasts');box.querySelectorAll('.toast.q').forEach(e=>e.remove());const d=document.createElement('div');d.className='toast q';d.innerHTML='<div class="h">From the record'+(q.para?' · as reported':'')+'</div><div>'+(q.para?q.text:'“'+q.text+'”')+'</div><div class="s">— '+q.src+'</div>';box.appendChild(d);setTimeout(()=>d.remove(),9000)}
+function qhtml(q){return (q.para?q.text:'“'+q.text+'”')}
+
+/* ---------------- quotes (all real, sourced) ---------------- */
+const QUOTE={
+  launch:{text:'The people who built Iowa are being pushed aside by greed and corruption. Big ag and big pharma have rigged the system against farmers and poisoned our families for generations. When I\'m Governor, we\'ll sue them, break up their monopolies, and make them answer for what they\'ve done to Iowa.',src:'Zach Lahn, campaign launch at the Belle Plaine farm, Nov. 6, 2025 (Iowa Capital Dispatch)'},
+  bandaid:{para:true,text:'Water treatment upgrades are a “Band-Aid.” His goal as governor: “decrease the nitrate load in the water in the future so we have less stress on that system.”',src:'Zach Lahn, KCCI GOP primary debate, May 19, 2026 (AP)'},
+  swim:{text:'Clean water — you can drink it, swim in it, and your kids can play in it.',src:'zachlahn.com/policy, “things you should just be able to count on”'},
+  testing:{text:'We need to have independent research on the state level… just to make sure we have proper science so farmers and consumers — by the way, it\'s not just farmers, it\'s consumers — can know the real side effects from using something.',src:'Zach Lahn, Radio Iowa, Sept. 2, 2026'},
+  noban:{para:true,text:'He isn\'t calling for a ban on farm chemicals; he says the EPA “is not telling the truth about the safety of some products,” and opposes legal immunity for the maker of Roundup.',src:'Radio Iowa / KJAN, Sept. 2–3, 2026'},
+  immunity:{text:'No company should ever have immunity from liability.',src:'Zach Lahn, interview posted to his Instagram, May 2026 (via Civil Eats)'},
+  monopolies:{text:'I will break up their monopolies, and I will get Iowa farmers a fair deal.',src:'Zach Lahn, primary victory speech, June 2, 2026 (AP / Fortune)'},
+  antitrust:{text:'File antitrust suits against the big agricultural input companies that have formed monopolies and are extorting our farmers.',src:'zachlahn.com/policy, “Save the Family Farm”'},
+  land:{text:'Over 25% of Iowa land is owned by out of state investors and foreign governments. I will fight for our birthright to own the ground under our feet.',src:'zachlahn.com'},
+  youngfarmers:{text:'Create pathways and incentives for young farmers to access land. Four-year goal: 10,000 new family farms — reverse the loss of 10,000 farms over the past 20 years.',src:'zachlahn.com/policy'},
+  lunch:{text:'I would like to see a time in which 80% of the food served in Iowa\'s public schools is grown in the state of Iowa.',src:'Zach Lahn, Radio Iowa, Sept. 8, 2026'},
+  lbs:{text:'Right now if you\'re selling food into a public school and you\'re growing beef, for instance, you have to be able to deliver 40,000 pounds at a time.',src:'Zach Lahn, Radio Iowa, Sept. 8, 2026'},
+  grazing:{text:'We can start to incentivize diversification to allow farmers that may be just subject right now to one single commodities market to multiple sources of that revenue… which I believe helps get people off the sideline, keeps young people onto family farms.',src:'Zach Lahn, Radio Iowa, Sept. 2, 2026 — proposing state grants for fencing and GPS collars to rotate cattle through pastures'},
+  rotations:{text:'We\'re not just doing two crop rotations.',src:'Zach Lahn, Jefferson Herald, Aug. 2026 — cover crops in the fall, oats and hay in the spring rotation on his Belle Plaine farm (KJAN)'},
+  topsoil:{text:'Being mindful of how do we keep our topsoil here, sequester water…',src:'Zach Lahn, Radio Iowa, Sept. 2, 2026'},
+  moratorium:{text:'I\'m calling for a complete moratorium on data centers in Iowa.',src:'Zach Lahn, The Gazette, May 22, 2026 — he has also proposed taxing data centers five times more to lower property taxes (Des Moines Register, April 2026)'},
+  iwill:{text:'I believe that the voters had their voice heard in 2010 with the IWILL funding, and I would like to use that and implement that to prioritize water quality initiatives in our state.',src:'Zach Lahn, The Gazette, May 22, 2026'},
+  kids:{text:'I will not stop talking about this issue and putting in place real solutions to make it better for the people of Iowa, so they can live long, healthy lives and want to have their kids and grandkids stay here. That is my commitment to you.',src:'Zach Lahn, Iowa State Fair Soapbox, Aug. 2026 (Iowa Public Radio)'},
+  rebate:{text:'Create tax rebates for young Iowans who stay or return to Iowa for down payment assistance for home ownership. Iowa currently ranks #4 nationally for net outmigration of 25–29 year-olds.',src:'zachlahn.com/policy, “Keep Iowa\'s Kids in Iowa”'},
+  listening:{text:'Over the next months, I will be on the road, listening in church basements, VFW halls, farms, and school gyms — where Iowa\'s wisdom lives.',src:'zachlahn.com'},
+  iowafirst:{text:'Iowa First. It\'s about taking responsibility for what\'s ours. Our fields, our families, our future.',src:'zachlahn.com'},
+  sevenkids:{text:'Last year, I never expected I\'d be doing what I\'m doing right now. My crowd was just seven kids and my wife.',src:'Zach Lahn, Iowa State Fair Soapbox, Aug. 2026 (Iowa Public Radio)'},
+  maha:{text:'We are going to make Iowa a model state for the MAHA movement.',src:'Zach Lahn on a call with MAHA Action\'s Tony Lyons, June 2026 (MS NOW). MAHA Action says he is the first candidate it ever endorsed; it gave $1 million on Sept. 21, 2026 and is bringing a Make Iowa Healthy Again Rally to Des Moines in October (PR Newswire).'},
+  cancer:{text:'Move Iowa to bottom half of Cancer Diagnoses — Iowa currently #2 for new diagnoses, #1 for fastest rising rates.',src:'zachlahn.com/policy, “Measurable Four-Year Goals”'},
+  healthy:{text:'I will Make Iowa Healthy Again. Clean food. Clean water. Honest medicine. I will work to defeat the cancer crisis plaguing the state.',src:'zachlahn.com'},
+  glyphosate:{text:'When you talk about glyphosate or glyphosate-based herbicides… the EPA studied this for years, we know way more than we\'ve ever known about this, and we also know that there are significant risks associated with its use.',src:'Zach Lahn, The Tucker Carlson Show, Feb. 2026 (via Agri-Pulse)'},
+  truth:{text:'I think what farmers want is to understand the truth, to know that their government is telling them the truth about these products. But as with many other things, the corporate capture is so heavy.',src:'Zach Lahn, The Tucker Carlson Show, Feb. 2026 (via Agri-Pulse)'},
+  trust:{text:'I am asking you for your trust, and if I\'m to do that you should know exactly where I stand and what I\'ll fight for — without hesitation and without apology.',src:'zachlahn.com'},
+  home:{text:'This is home. And it\'s worth fighting for.',src:'zachlahn.com'},
+  donors:{text:'I am a father, a farmer, and a businessman. I\'m investing in Iowa and I\'m my own biggest donor. I don\'t answer to donors or corporations — only to God, my family, and the people of this state.',src:'zachlahn.com'},
+  taylorcraft:{text:'Alfred and Evelyn\'s sons Victor and Roger were inspired by aviation and purchased a $700 Taylorcraft and learned to fly off a runway mowed in the family\'s bean field.',src:'zachlahn.com/about — Zach is himself a certified pilot (Des Moines Register)'},
+  roots:{para:true,text:'In 1862 Hans Schluntz answered Governor Kirkwood\'s call and rode with Iowa\'s Second Cavalry, the “Hawkeyes on Horseback.” Twenty years later Friedrich Lahn left Hamburg at 14 in the stowage of the S.S. Weiland, made his way to Belle Plaine, and built the homestead that stayed in the family for 105 years. Sold in 2005; Zach bought it back nearly a decade later.',src:'zachlahn.com/about'},
+  primary:{para:true,text:'June 2, 2026: 80,765 votes, 37.7%, in a five-way Republican primary — a 1,652-vote margin and a nationally covered upset.',src:'Iowa Secretary of State canvass; AP'},
+  debate:{para:true,text:'Environmental factors are “absolutely” involved in Iowa\'s cancer rates — high nitrate loads in waterways and farmers\' exposure to glyphosate. “That report that came out that said farmers have lower instances of cancer — that is not actually what it says.” He proposed refundable tax credits to “incentivize different types of nitrogen application for our farmers.”',src:'KCCI GOP primary debate, May 19, 2026 (Iowa Capital Dispatch)'},
+  soapbox:{text:'That means we should have good schools. That we should have clean water, a good, fair judicial system. That\'s what our campaign\'s been about this entire time.',src:'Zach Lahn, Iowa State Fair Soapbox, Aug. 2026 (Iowa Public Radio)'},
+  isu:{text:'For Iowa State, I would love to see them help young farmers and current farmers work on new methods of farming, to make more money, live longer, healthier lives, build a sustainable operation and pass something on to their kids.',src:'Zach Lahn, Iowa State Daily, May 2026'},
+  schools:{text:'The governor has to be the number one advocate for public school kids in the state.',src:'Zach Lahn, Jefferson Herald, Aug. 2026'},
+  king:{text:'The whole beauty and magic of it is the history.',src:'Zach Lahn on the King Theatre in Belle Plaine, which he bought in 2023 — opened 1930, 400 seats and a balcony, $5 tickets Friday and Saturday at 7 (Southeast Iowa Union)'},
+  hometown:{text:'Zach and his siblings were raised in rural Plymouth County, Iowa and from a young age had a deep love and respect instilled in them for the beauty of God\'s creation. His father, Jim, studied agronomy and worked as a conservationist while also answering the call to pastoral ministry.',src:'zachlahn.com/about'}
+};
+const NOTE_LABELS={healthy:'Make Iowa Healthy Again',cancer:'The cancer goal',debate:'Cancer, nitrates, glyphosate — the debate',glyphosate:'Glyphosate',truth:'Corporate capture',noban:'Not a ban — independent testing',testing:'Independent testing',bandaid:'Water treatment is a Band-Aid',iwill:'Fund IWILL',swim:'Water you can swim in',launch:'Campaign launch, Nov. 6, 2025',monopolies:'Primary night',antitrust:'Antitrust plank',immunity:'No immunity',land:'Iowa land in Iowa hands',youngfarmers:'10,000 new family farms',lunch:'80% Iowa-grown school food',lbs:'40,000 pounds at a time',grazing:'Grazing grants and GPS collars',rotations:'Not just two rotations',topsoil:'Topsoil',isu:'Iowa State\'s job',moratorium:'Data center moratorium',rebate:'Keep Iowa\'s kids in Iowa',kids:'Kids and grandkids',schools:'Public school kids',soapbox:'State Fair Soapbox',listening:'The listening tour',iowafirst:'Iowa First',sevenkids:'Seven kids and my wife',maha:'A model state for MAHA',primary:'June 2, 2026',roots:'Six generations',taylorcraft:'The Taylorcraft',hometown:'Hinton, Plymouth County',king:'The King Theatre',donors:'My own biggest donor',trust:'Where I stand',home:'This is home'};
+const SOURCES=[
+  ['Zach Lahn for Governor — home, policy, about','https://www.zachlahn.com/','https://www.zachlahn.com/policy/','https://www.zachlahn.com/about/'],
+  ['Iowa Capital Dispatch — campaign launch, Nov. 6, 2025','https://iowacapitaldispatch.com/2025/11/06/republican-zach-lahn-enters-2026-iowa-gubernatorial-race/'],
+  ['Iowa Capital Dispatch — KCCI debate on cancer, nitrates, May 19, 2026','https://iowacapitaldispatch.com/2026/05/19/gop-gubernatorial-candidates-debate-legal-immigration-cancer-prevention/'],
+  ['AP via PBS NewsHour — primary result, “Band-Aid” quote, June 3, 2026','https://www.pbs.org/newshour/politics/maha-candidate-beats-trumps-choice-in-republican-primary-for-iowa-governor'],
+  ['Fortune / AP — victory speech, June 3, 2026','https://fortune.com/2026/06/03/zach-lahn-iowa-governor-maha-trump-feenstra-upset/'],
+  ['Radio Iowa — independent testing, grazing grants, Sept. 2, 2026','https://www.radioiowa.com/2026/09/02/zach-lahn-says-state-should-back-research-into-safety-of-round-up/'],
+  ['Radio Iowa — 80% Iowa-grown school food, Sept. 8, 2026','https://www.radioiowa.com/2026/09/08/two-candidates-call-for-more-iowa-grown-food-to-be-served-in-iowa-schools/'],
+  ['KJAN — regenerative practices, Sept. 2026','https://www.kjan.com/news/local-news/lahn-calls-for-state-research-into-use-of-round-up/'],
+  ['Agri-Pulse — Tucker Carlson Show quotes, June 3, 2026','https://www.agri-pulse.com/articles/24785-lahns-iowa-victory-galvanizes-other-maha-republicans'],
+  ['Civil Eats — “no immunity from liability,” July 30, 2026','https://civileats.com/2026/07/30/will-maha-candidate-zach-lahn-stand-up-to-big-ag-in-iowa/'],
+  ['The Gazette — IWILL sales tax, data center moratorium, May 22, 2026','https://www.thegazette.com/news/elections/state/lahn-boost-sales-tax-for-water-quality-pause-data-centers/article_ee0c901a-244b-4112-84a8-7332e5cc65e6.html'],
+  ['Des Moines Register (via AOL) — data center taxes, April 6, 2026','https://www.aol.com/articles/gop-governor-candidate-zach-lahn-100823550.html'],
+  ['Iowa Public Radio — State Fair Soapbox, Aug. 16, 2026','https://www.iowapublicradio.org/political-news/2026-08-16/governor-race-zach-lahn-rob-sand-iowa-state-fair-soapbox'],
+  ['Jefferson Herald — schools, rotations, Aug. 2026','https://carrollspaper.com/jefferson_herald/lahn-campaigns-on-restoring-and-preserving-iowa-culture/article_5ff2785c-9a3d-453f-83fe-7ecc5652c0c1.html'],
+  ['Iowa State Daily — fireside chat, May 27, 2026','https://iowastatedaily.com/339117/news/a-fireside-chat-with-the-gubernatorial-candidate-zach-lahn/'],
+  ['MS NOW — “model state for the MAHA movement,” June 5, 2026','https://www.ms.now/news/zach-lahn-maha-iowa'],
+  ['PR Newswire — MAHA Action $1M and October rally, Sept. 21, 2026','https://www.prnewswire.com/news-releases/maha-action-pac-donates-1-million-to-zach-lahns-campaign-for-governor-of-iowa-302884862.html'],
+  ['Vinton Today — announcement, Homeplace Ventures, seven children','https://www.vintontoday.com/articles/Government/article1043744.html'],
+  ['Southeast Iowa Union — “Lahns keep King Theatre alive” (Ashley Wallace manages it)','https://www.southeastiowaunion.com/se-iowa-union-hometown-current/lahns-keep-king-theatre-alive/'],
+  ['Vinton Today — campaign launch photo of the farmhouse, Nov. 6, 2025','https://www.vintontoday.com/articles/Government/article1043744.html'],
+  ['Wikipedia — primary canvass, biography','https://en.wikipedia.org/wiki/Zach_Lahn']
+];
+
+/* ---------------- quests ---------------- */
+const QUESTS=[
+ {id:'homeplace',title:'Homeplace',main:true,trust:5,where:'fencegap',obj:'Fix the five missing rails in the south fence (punch a tree → workbench → fence).',quote:QUOTE.donors,
+  check:()=>FENCE_GAPS.every(k=>{const [x,z]=k.split(',').map(Number);const b=getB(x,13,z);return b===B.FENCE||b===B.WHITEFENCE}),unlocks:['water','testing','signs','listen','grazing','lunch','hometown']},
+ {id:'water',title:'Water you can swim in',main:true,trust:15,where:'creek',obj:'Plant cover crops and prairie strips beside brown water — the creek is just east of the house — until the rivers are 25% clean. (Oats → cover-crop seed at the workbench.)',quote:QUOTE.bandaid,
+  check:()=>cleanPct()>=25,onDone:()=>showQuote(QUOTE.swim)},
+ {id:'testing',title:'Independent testing',main:true,trust:10,where:'lab',obj:'Bottle 4 water samples and 2 soil samples (glass → bottles) and bring them to Dr. Okafor at the University of Iowa lab in Iowa City.',quote:QUOTE.testing,turnin:'okafor',need:{wsample:4,ssample:2},unlocks:['cartel']},
+ {id:'cartel',title:'Break up the cartel',main:true,trust:15,where:'cartel',obj:'Take 5 price ledgers from the Consolidated Ag Inputs silo complex across the river, northwest of the farm, and hand them to Deputy AG Ramirez at the Capitol.',quote:QUOTE.launch,turnin:'ramirez',need:{ledger:5},unlocks:['land','kids','datacenter'],onDone:()=>showQuote(QUOTE.immunity)},
+ {id:'land',title:'Iowa land in Iowa hands',main:true,trust:10,where:'parcel0',obj:'Find the five absentee-owner signs around the state and press E on each. Then tell Kayla at the south gate.',quote:QUOTE.land,turnin:'kayla'},
+ {id:'lunch',title:'80% Iowa-grown lunch',main:true,trust:15,where:'school',obj:'Bring Ms. Alvarez at Roosevelt Elementary in Des Moines: 8 oats, 6 sweet corn, 4 apples, 3 Iowa beef, 3 eggs.',quote:QUOTE.lunch,turnin:'alvarez',need:{oats:8,sweetcorn:6,apple:4,beef:3,eggs:3},stage2:'Break the vending machine by the school door and put an Iowa Fresh stand (workbench) where it stood.',
+  check2:()=>{let stand=false,vend=false;for(let x=80;x<=94;x++)for(let z=116;z<=121;z++){const b=getB(x,12,z);if(b===B.FRESHSTAND)stand=true;if(b===B.VENDING)vend=true}return stand&&!vend},onDone:()=>showQuote(QUOTE.lbs)},
+ {id:'grazing',title:'Rotational grazing',main:true,trust:10,where:'paddock',obj:'Close the nine gaps in the paddock fence on the east lawn, craft 3 GPS collars (scrap iron by the machine shed + glass), collar three cows, and lead them inside with a hay bale in hand.',quote:QUOTE.grazing,
+  check:()=>{const closed=PADDOCK_GAPS.every(k=>{const [x,z]=k.split(',').map(Number);const b=getB(x,13,z);return b===B.FENCE||b===B.WHITEFENCE});if(!closed)return false;let n=0;for(const c of cows)if(c.collared&&c.x>PADDOCK.x0+.5&&c.x<PADDOCK.x1+.5&&c.z>PADDOCK.z0+.5&&c.z<PADDOCK.z1+.5)n++;return n>=3},onDone:()=>showQuote(QUOTE.rotations)},
+ {id:'datacenter',title:'Hit pause',main:false,trust:5,where:'datacenter',obj:'Plant an IOWA FIRST sign on the data center slab east of the Cedar River, up toward Cedar Rapids.',quote:QUOTE.moratorium,
+  check:()=>{for(let x=180;x<=194;x++)for(let z=44;z<=54;z++)for(let y=12;y<=14;y++)if(getB(x,y,z)===B.SIGN)return true;return false},onDone:()=>{for(let x=172;x<=180;x++)for(const z of [47,50])for(let y=8;y<16;y++)if(getB(x,y,z)===B.DRAIN)setB(x,y,z,B.AIR);toast('The cooling intakes on the river shut down.')}},
+ {id:'kids',title:'Keep Iowa\'s kids in Iowa',main:false,trust:5,where:'depot',obj:'Get three down-payment rebate vouchers from Clerk Nguyen at the Capitol and hand one to each young Iowan waiting at the depot in Belle Plaine, north of the farm.',quote:QUOTE.rebate,check:()=>G.kidsStayed>=3,onDone:()=>showQuote(QUOTE.kids)},
+ {id:'listen',title:'Listening tour',main:false,trust:5,where:'church',obj:'Sit down with people where Iowa\'s wisdom lives: the church basement and VFW in Belle Plaine, Marv\'s farm out in Hinton, and the school gym in Des Moines.',quote:QUOTE.listening,check:()=>Object.keys(G.listened).length>=4},
+ {id:'signs',title:'Yard signs',main:false,trust:5,where:null,obj:'Craft and plant 10 IOWA FIRST yard signs anywhere in the state.',quote:QUOTE.iowafirst,check:()=>G.signsPlaced>=10,onDone:()=>showQuote(QUOTE.sevenkids)},
+ {id:'hometown',title:'Go home',main:false,trust:3,where:'hinton',obj:'Fly the Taylorcraft west to Hinton, in the Loess Hills of Plymouth County, where Zach grew up.',quote:QUOTE.taylorcraft,check:()=>Math.hypot(P.x-31,P.z-38)<8,onDone:()=>showQuote(QUOTE.hometown)},
+ {id:'rally',title:'Make Iowa Healthy Again rally',main:true,trust:10,where:'fair',obj:'Build the stage at the State Fairgrounds: 16 planks on the pad between the hay bales and 2 rally banners. Then tell Priya.',quote:QUOTE.maha,requires:['water','testing','cartel','lunch','grazing','land'],turnin:'priya',
+  onDone:()=>startRally(),stageReady:()=>{let p=0,b=0;for(let x=STAGE.x0;x<=STAGE.x1;x++)for(let z=STAGE.z0;z<=STAGE.z1;z++){if(getB(x,12,z)===B.PLANK)p++;if(getB(x,13,z)===B.BANNER)b++}return p>=16&&b>=2},unlocks:['election']},
+ {id:'election',title:'Election Night',main:true,trust:0,where:'terracehill',obj:'November 3. Walk up to the porch at Terrace Hill.',quote:QUOTE.trust,check:()=>Math.abs(P.x-86)<5&&P.z>110&&P.z<114.5}
+];
+const QBY={};QUESTS.forEach(q=>QBY[q.id]=q);
+function qs(id){return G.quests[id]||(G.quests[id]={status:'locked',stage:1})}
+function openQuest(id){const s=qs(id);if(s.status!=='locked')return;s.status='open';toast('New quest: '+QBY[id].title);if(!G.tracked||qs(G.tracked).status!=='open')G.tracked=id;G.hudDirty=true}
+function completeQuest(id){const q=QBY[id],s=qs(id);if(s.status==='done')return;s.status='done';G.trust=Math.min(100,G.trust+q.trust);toast('✔ '+q.title+(q.trust?'  (+'+q.trust+' trust)':''),4500);showQuote(q.quote);
+  if(q.onDone)q.onDone();(q.unlocks||[]).forEach(u=>{const uq=QBY[u];if(!uq.requires||uq.requires.every(r=>qs(r).status==='done'))openQuest(u)});
+  for(const q2 of QUESTS)if(q2.requires&&qs(q2.id).status==='locked'&&q2.requires.every(r=>qs(r).status==='done'))openQuest(q2.id);
+  if(G.tracked===id)cycleTracked();G.hudDirty=true;save()}
+function cycleTracked(){const open=QUESTS.filter(q=>qs(q.id).status==='open').map(q=>q.id);if(!open.length){G.tracked=null;G.hudDirty=true;return}const i=open.indexOf(G.tracked);G.tracked=open[(i+1)%open.length];G.hudDirty=true}
+function questTarget(){const q=G.tracked&&QBY[G.tracked];if(!q)return null;let w=q.where;if(q.id==='water')return nearestPolluted();if(q.id==='land'){for(let i=0;i<5;i++){const p=POI['parcel'+i];if(getB(p.x,groundY(p.x,p.z)+1,p.z)===B.ABSENTEE)return p}return POI.gate}
+  if(q.id==='lunch'&&qs('lunch').stage===2)return POI.school;if(q.id==='cartel'&&count('ledger')>=5)return POI.capitol;if(q.id==='land'&&G.parcels>=5)return POI.gate;if(q.id==='kids'&&count('voucher')===0&&G.vouchersGiven<3)return POI.capitol;if(q.id==='testing'&&!hasAll(q.need))return nearestPolluted();
+  if(q.id==='listen'){for(const k of ['church','vfw','hinton','school'])if(!G.listened[k])return POI[k]}return w?POI[w]:null}
+function nearestPolluted(){let best=null,bd=1e9;for(let i=0;i<pollutedList.length;i+=3){const p=pollutedList[i];if(getB(p[0],p[1],p[2])!==B.POLLUTED)continue;const d=Math.hypot(p[0]-P.x,p[2]-P.z);if(d<bd){bd=d;best={x:p[0],z:p[2],name:'Dirty water'}}}return best}
+function checkQuests(){for(const q of QUESTS){const s=qs(q.id);if(s.status!=='open')continue;
+  if(q.id==='lunch'){if(s.stage===2&&q.check2())completeQuest(q.id);continue}
+  if(q.check&&q.check()){if(q.id==='election'){startEnding();continue}completeQuest(q.id)}}}
+
+/* ---------------- NPCs & dialogue ---------------- */
+let dlg=null;
+function say(who,lines,onEnd){dlg={who,lines,i:0,onEnd};G.state='dialog';document.getElementById('dialog').classList.add('on');renderDlg()}
+function renderDlg(){document.getElementById('dWho').textContent=dlg.who;document.getElementById('dTxt').textContent=dlg.lines[dlg.i];document.getElementById('dPg').textContent=(dlg.i+1)+' / '+dlg.lines.length;document.getElementById('dNext').textContent=dlg.i<dlg.lines.length-1?'Next ▶':'Done'}
+function dialogNext(){if(!dlg)return;if(dlg.i<dlg.lines.length-1){dlg.i++;renderDlg()}else closeDialog()}
+function closeDialog(){document.getElementById('dialog').classList.remove('on');const cb=dlg&&dlg.onEnd;dlg=null;G.state='play';if(cb)cb()}
+document.getElementById('dNext').addEventListener('click',dialogNext);document.getElementById('dClose').addEventListener('click',closeDialog);
+function listenAt(key,label){if(!G.listened[key]){G.listened[key]=true;toast('Listened: '+label+' ('+Object.keys(G.listened).length+'/4)')}}
+function turnIn(qid,npc,okLines,failLines){const q=QBY[qid],s=qs(qid);if(s.status!=='open')return false;
+  if(q.need&&!hasAll(q.need)){say(npc.name,failLines);return true}
+  say(npc.name,okLines,()=>{if(q.need)for(const k in q.need)removeItem(k,q.need[k]);if(q.stage2&&s.stage===1){s.stage=2;toast('Quest updated: '+q.title);G.hudDirty=true;if(q.id==='lunch')showQuote(QUOTE.lbs);return}completeQuest(qid)});return true}
+const NPC_DEFS=[
+ {id:'ryan',name:'Ryan Wallace (neighbor)',x:160.5,z:75.5,face:Math.PI/2,o:{shirtCol:0x4a6a9a,hat:0x7a5230,skin:0xdba98a,hair:0x3a2a1a},
+  talk(n){const h=qs('homeplace'),w=qs('water'),t=qs('testing');
+   if(h.status==='open')say(n.name,['Morning. Wind took five rails out of the south fence, just east of the lane.','We farm this ground on shares with Zach, so it\'s our fence too. Punch a tree in the windbreak, split the logs at the workbench — that\'s E — and put five fence back in the gap.','Then we\'ll talk about the creek.']);
+   else if(w.status==='open')say(n.name,['Creek\'s right off the east lawn, and it runs brown every June. Nitrate off fields upstream — and Cedar Rapids drinks from the same river.','Cover crop and prairie on the banks pull it down. One oat makes two seeds at the workbench. Plant them within a few blocks of the dirty water.','Nitrate slimes crawl out of that water at night. Clean water, no slimes.']);
+   else if(t.status==='open')say(n.name,['Creek\'s clearing. Now put some in a bottle — sand makes glass, glass makes bottles — and take it to the lab in Iowa City.','Independent testing. Not the company\'s lab, not Washington\'s.']);
+   else say(n.name,['Ashley\'s got the King open tonight — five bucks a seat, doors at 6:15. Take her some sweet corn and she\'ll pop it.','And gather the eggs — press E on the hay in the coop by the lane.'])}},
+ {id:'ashley',name:'Ashley Wallace (King Theatre)',x:154.5,z:50.5,face:0,o:{shirtCol:0xa63c2a,pants:0x2f2f2f,skin:0xf0c8a8,hair:0x6a3a1a},
+  talk(n){if(count('sweetcorn')>=6)say(n.name,['Six ears. Give me a minute — the popper\'s from 1930, same as the building.','Four hundred seats, a balcony, and the biggest retractable screen in the state. Zach bought it in 2023 so the lights would stay on.'],()=>{removeItem('sweetcorn',6);addItem('popcorn',4);if(!G.flags.kingQuote){G.flags.kingQuote=true;showQuote(QUOTE.king)}});
+   else say(n.name,['Welcome to the King. Opened in 1930, the Mansfields ran it ninety years, and Zach bought it in 2023 so the lights would stay on.','Five bucks, Friday and Saturday at seven. Bring me six ears of sweet corn and I\'ll pop enough for the balcony.']);if(!G.flags.kingQuote){G.flags.kingQuote=true;showQuote(QUOTE.king)}}},
+ {id:'kayla',name:'Kayla (young farmer)',x:157.5,z:93.5,face:0,o:{shirtCol:0x7a9a4a,pants:0x2f2f2f,hair:0x2a1a0a,skin:0xf0c8a8},
+  talk(n){const l=qs('land');
+   if(l.status==='open'){if(G.parcels>=5)turnIn('land',n,['Five parcels back in Iowa hands. That\'s five families that can stay.','Tom\'s already looking at the one by the river. I\'m planting oats. Real ones.']);else say(n.name,['Five parcels around the state still have absentee-owner signs on them — '+G.parcels+' of 5 done.','Walk up to each sign and press E. Then come find me.'])}
+   else if(l.status==='done')say(n.name,['Planting oats this spring. Come see the first cutting.']);
+   else say(n.name,['I grew up two miles from here. Can\'t buy an acre — a fund three time zones away outbid everybody at the last auction.','Somebody should do something about that.'])}},
+ {id:'miller',name:'Sgt. Miller (VFW)',x:145.5,z:49.5,face:0,o:{shirtCol:0x3a3a3a,hat:0x1a1a1a,skin:0xdba98a,hair:0x8a8a8a},
+  talk(n){say(n.name,['Come in and sit down. We don\'t need a speech. We need somebody who listens.','Half this post drives forty minutes for a VA appointment and drinks bottled water at home. Fix the water.']);listenAt('vfw','VFW hall')}},
+ {id:'tom',name:'Tom (Army veteran)',x:148.5,z:49.5,face:0,o:{shirtCol:0x556b2f,pants:0x3b3b3b,skin:0xc98a6a,hair:0x1a1a1a},
+  talk(n){say(n.name,['Twenty-two years in the Guard. What I want is forty acres and a place my kids won\'t leave.','Kayla says there\'s a plan for that. Land to young families and veterans. I\'d take that deal today.'])}},
+ {id:'gus',name:'Gus (locker)',x:160.5,z:49.5,face:0,o:{shirtCol:0xf4efe6,pants:0x4a3020,skin:0xe8b890,hair:0x3a2a1a},
+  talk(n){if(count('hay')>=2)say(n.name,['Iowa beef, cut right here in town. Two hay bales a package.','Deal?'],()=>{removeItem('hay',2);addItem('beef',1)});else say(n.name,['Iowa beef, cut here in town. Two hay bales a package.','Three oats make a bale at the workbench. Bring me hay.'])}},
+ {id:'ruth',name:'Pastor Ruth',x:162.5,z:50.5,face:0,o:{shirtCol:0x2a2a4a,pants:0x2a2a4a,skin:0x8a5a3a,hair:0x1a1a1a},
+  talk(n){say(n.name,['The basement is where the real meetings happen. Coffee\'s on.','Tell me what you\'re hearing out there — and don\'t forget the folks who don\'t come to meetings.']);listenAt('church','church basement')}},
+ {id:'maddie',name:'Maddie',x:143.5,z:52.5,face:Math.PI,o:{shirtCol:0xd06a8a,pants:0x2f2f2f,skin:0xf0c8a8,hair:0xb04a2a},kid:true,lines:['Denver has jobs and mountains. Iowa has… my parents.'],stay:['A down-payment rebate? For staying?','…Okay. Okay. I\'ll stay.']},
+ {id:'jordan',name:'Jordan',x:145.5,z:52.5,face:Math.PI,o:{shirtCol:0x4a6a9a,pants:0x3b4e7a,skin:0x8a5a3a,hair:0x1a1a1a},kid:true,lines:['I\'d farm if I could afford dirt.'],stay:['Down payment on a place with a shed and forty acres?','Tear up the ticket.']},
+ {id:'sam',name:'Sam',x:147.5,z:52.5,face:Math.PI,o:{shirtCol:0x6a6a6a,pants:0x2f2f2f,skin:0xe8b890,hair:0xe0b43a},kid:true,lines:['Give me one reason.'],stay:['That\'s one reason.','Fine. I\'ll stay and complain about it here instead.']},
+ {id:'okafor',name:'Dr. Okafor (UI lab)',x:177.5,z:111.5,face:0,o:{shirtCol:0xffffff,pants:0x2f2f2f,skin:0x6a3a22,hair:0x1a1a1a},
+  talk(n){const t=qs('testing');if(t.status==='open')turnIn('testing',n,['Four water, two soil. Running them now — no company lab, no Washington lab. Just data.','Nitrate over the drinking-water standard in three of four. Residue in both soils. I\'ll publish it.','And the refundable-credit program starts Monday. Your neighbors will be planting cover crops whether you nag them or not.'],['Bring me four water samples and two soil samples. Right-click dirty water or tilled soil with a bottle.','Independent, state-level testing. That\'s all I\'m asking for.']);
+   else if(t.status==='done')say(n.name,['The credit program is working. Watch the rivers.']);else say(n.name,['University of Iowa should be aiming its research at Iowa\'s cancer crisis. Bring me samples when you have them.'])}},
+ {id:'lindqvist',name:'Prof. Lindqvist (ISU)',x:113.5,z:68.5,face:0,o:{shirtCol:0xa63c2a,pants:0x3b4e7a,skin:0xf0c8a8,hair:0xd0d0d0},
+  talk(n){say(n.name,['Rotational grazing: fence the paddock, collar three cows so the data comes back, lead them in with a hay bale in your hand.','Iron for the collars — there\'s scrap by the grain bin at the farm. Glass from riverbank sand.','Oats and hay in the rotation, cover crop in the fall. Not just two crops.']);showQuote(QUOTE.isu)}},
+ {id:'ramirez',name:'Deputy AG Ramirez',x:124.5,z:102.5,face:0,o:{shirtCol:0x2a2a2a,pants:0x2a2a2a,skin:0xc98a6a,hair:0x1a1a1a},
+  talk(n){const c=qs('cartel');if(c.status==='open')turnIn('cartel',n,['Five ledgers. Price-fixing across three counties, same handwriting.','We file antitrust suits Monday. And no company gets immunity from liability — not from this office.'],['Three companies control most of the seed and chemical market. If you can bring me five price ledgers from that silo complex across the river from your farm, we file.','Press E on the red-and-gold boxes inside the office.']);
+   else if(c.status==='done')say(n.name,['The suits are filed. Discovery is going to be interesting.']);else say(n.name,['Attorney General\'s office. Come back when the lab report is public — then we can move.'])}},
+ {id:'nguyen',name:'Clerk Nguyen (Treasurer)',x:119.5,z:102.5,face:0,o:{shirtCol:0x7a9a4a,pants:0x2f2f2f,skin:0xf0c8a8,hair:0x1a1a1a},
+  talk(n){const k=qs('kids');if(k.status==='open'&&G.vouchersGiven<3)say(n.name,['Three down-payment rebate vouchers for young Iowans who stay.','The noon train leaves Belle Plaine with three of them on it. Hurry.'],()=>{addItem('voucher',3);G.vouchersGiven=3});else if(k.status==='done')say(n.name,['Three fewer names on the outbound list.']);else say(n.name,['Treasurer\'s office. Property tax is the only long-term benefit a data center pays. Ask me about rebates once the antitrust case is moving.'])}},
+ {id:'alvarez',name:'Ms. Alvarez (lunch)',x:87.5,z:123.5,face:0,o:{shirtCol:0xe0b43a,pants:0x2f2f2f,skin:0xc98a6a,hair:0x1a1a1a},
+  talk(n){const l=qs('lunch');if(l.status==='open'&&l.stage===1)turnIn('lunch',n,['That\'s a menu. Oats, sweet corn, apples, beef, eggs — all from inside the state line.','Now that vending machine by the door. Break it and put an Iowa Fresh stand where it stood.'],['I feed 400 kids a day. Almost all of it comes from out of state, because a supplier has to deliver forty thousand pounds at a time.','Bring me what a farm can bring: 8 oats, 6 sweet corn, 4 apples, 3 Iowa beef, 3 eggs.']);
+   else if(l.status==='open')say(n.name,['The machine by the door. Break it, craft an Iowa Fresh stand, place it.']);else if(l.status==='done')say(n.name,['Eighty percent Iowa-grown. The kids noticed before the grown-ups did.']);else say(n.name,['Cafeteria\'s closed. Come back later.'])}},
+ {id:'coach',name:'Coach Pham (gym)',x:92.5,z:123.5,face:0,o:{shirtCol:0xa63c2a,pants:0x2f2f2f,skin:0xe8b890,hair:0x1a1a1a},
+  talk(n){say(n.name,['Forty minutes outside and real food would fix half of what I see in this gym.','Come sit in the bleachers. Parents talk here more than they do at the Capitol.']);listenAt('school','school gym');showQuote(QUOTE.schools)}},
+ {id:'priya',name:'Priya (MAHA Action)',x:127.5,z:120.5,face:0,o:{shirtCol:0x1a422b,pants:0x2f2f2f,skin:0xc98a6a,hair:0x1a1a1a},
+  talk(n){const r=qs('rally');if(r.status==='open'){if(QBY.rally.stageReady())turnIn('rally',n,['Stage is up. Banners are up.','Let\'s go make Iowa the model state.'],[]);else say(n.name,['The Make Iowa Healthy Again rally is here in October.','Sixteen planks on the pad between the hay bales, two rally banners on top. Then come get me.'])}
+   else if(r.status==='done')say(n.name,['Best crowd of the year. On to November.']);else say(n.name,['MAHA Action. First candidate we ever endorsed. Finish the big four — water, testing, cartel, lunch — and we\'ll talk rally.'])}},
+ {id:'marv',name:'Marv (Hinton)',x:31.5,z:38.5,face:0,o:{shirtCol:0x7a5230,hat:0x4a3020,skin:0xdba98a,hair:0xd0d0d0},
+  talk(n){say(n.name,['You grew up around here, didn\'t you. Loess Hills don\'t change. The farms did.','Sit a while. Nobody flies out here to listen.']);listenAt('hinton','Marv\'s farm in Hinton')}},
+ {id:'bev',name:'Bev (pork chop stand)',x:130.5,z:116.5,face:Math.PI/2,o:{shirtCol:0xf4efe6,pants:0xa63c2a,skin:0xf0c8a8,hair:0xd0d0d0},
+  talk(n){if(count('oats')>=2)say(n.name,['Pork chop on a stick. Two oats.','Best thing at the Fair.'],()=>{removeItem('oats',2);addItem('porkchop',1)});else say(n.name,['Pork chop on a stick, two oats. Come back with oats.'])}}
+];
+function setupNPCs(){for(const d of NPC_DEFS){const n=addNPC(d.id,d.name,d.x,d.z,Object.assign({face:d.face},d.o));n.def=d}}
+function talkTo(n){const d=n.def;if(d.kid){const k=qs('kids');if(k.status==='open'&&count('voucher')>0&&!G.flags['stay_'+d.id]){say(d.name,d.stay,()=>{removeItem('voucher',1);G.flags['stay_'+d.id]=true;G.kidsStayed++;toast(d.name+' is staying ('+G.kidsStayed+'/3)')})}else if(G.flags['stay_'+d.id])say(d.name,['Still here.']);else say(d.name,d.lines);return}d.talk(n)}
+function npcMarks(){for(const n of npcs){const d=n.def;let m=false;const id=d.id;
+  if(id==='okafor'&&qs('testing').status==='open'&&hasAll(QBY.testing.need))m=true;if(id==='ramirez'&&qs('cartel').status==='open'&&count('ledger')>=5)m=true;
+  if(id==='kayla'&&qs('land').status==='open'&&G.parcels>=5)m=true;if(id==='alvarez'&&qs('lunch').status==='open'&&qs('lunch').stage===1&&hasAll(QBY.lunch.need))m=true;
+  if(id==='priya'&&qs('rally').status==='open'&&QBY.rally.stageReady())m=true;if(id==='nguyen'&&qs('kids').status==='open'&&G.vouchersGiven<3)m=true;if(d.kid&&qs('kids').status==='open'&&count('voucher')>0&&!G.flags['stay_'+id])m=true;
+  if(id==='ryan'&&qs('homeplace').status==='open')m=true;if(id==='ashley'&&count('sweetcorn')>=6)m=true;n.mark.visible=m}}
+
+/* ---------------- interactions ---------------- */
+function fwd(){const cp=Math.cos(P.pitch);return [-Math.sin(P.yaw)*cp,Math.sin(P.pitch),-Math.cos(P.yaw)*cp]}
+function eye(){return [P.x,P.y+1.62,P.z]}
+function rayEntity(list,cy,r,maxD){const [ex,ey,ez]=eye(),[dx,dy,dz]=fwd();let best=null,bd=maxD;for(const e of list){const cx=e.x-ex,cyy=e.y+cy-ey,cz=e.z-ez;const t=cx*dx+cyy*dy+cz*dz;if(t<0||t>bd)continue;const px=ex+dx*t-e.x,py=ey+dy*t-(e.y+cy),pz=ez+dz*t-e.z;if(px*px+py*py+pz*pz<r*r){best=e;bd=t}}return best}
+function targetBlock(){const [ex,ey,ez]=eye(),[dx,dy,dz]=fwd();return raycast(ex,ey,ez,dx,dy,dz,5.5,solidPred)}
+function targetAny(){const [ex,ey,ez]=eye(),[dx,dy,dz]=fwd();return raycast(ex,ey,ez,dx,dy,dz,5.5,anyPred)}
+function onAttack(){if(P.flying)return;const s=rayEntity(slimes,.45,.75,3.6);if(s){s.hp--;s.hit=.25;const [dx,,dz]=fwd();s.vx=dx*7;s.vz=dz*7;s.vy=5;puff(s.x,s.y+.5,s.z,0x8a9a2a,10,4);if(s.hp<=0){scene.remove(s.model);slimes.splice(slimes.indexOf(s),1);puff(s.x,s.y+.5,s.z,0x6f7a2a,24,6);toast('Nitrate slime dissolved.')}return}
+  const c=rayEntity(cows,.6,.9,3.6);if(c){const [dx,,dz]=fwd();c.vx=dx*4;c.vz=dz*4;c.vy=3;return}
+  const t=targetBlock();if(t&&BD[t.b].hard===0&&!BD[t.b].unbreak)breakBlock(t.x,t.y,t.z)}
+function breakBlock(x,y,z){const b=getB(x,y,z),d=BD[b];if(d.unbreak)return;setB(x,y,z,B.AIR);puff(x+.5,y+.5,z+.5,blockColor(b),12,4);
+  let drop=d.drop;if(b===B.TALLGRASS&&Math.random()<.5)drop=null;if(b===B.LEAVES&&Math.random()<.08)drop='apple';
+  if(drop){let n=1;if(b===B.VENDING)n=3;if(b===B.CORN)n=1;addItem(drop,n)}
+  if(b===B.SIGN&&G.signsPlaced>0)G.signsPlaced--;
+  if([B.CORN,B.OATS,B.TALLGRASS,B.FLOWER,B.APPLELEAVES,B.SOY].includes(b)||(b===B.PRAIRIE&&!edits.has(x+','+y+','+z+'p')))regrow.push({x,y,z,b,t:now+75+Math.random()*60});
+  if(b===B.APPLELEAVES)setB(x,y,z,B.LEAVES);}
+const regrow=[];
+function tickRegrow(){for(let i=regrow.length-1;i>=0;i--){const r=regrow[i];if(now<r.t)continue;regrow.splice(i,1);const cur=getB(r.x,r.y,r.z);if(cur===B.AIR||(r.b===B.APPLELEAVES&&cur===B.LEAVES)){if(r.b===B.APPLELEAVES||isSolid(r.x,r.y-1,r.z))setB(r.x,r.y,r.z,r.b);edits.delete(r.x+','+r.y+','+r.z)}}}
+function playerOverlaps(x,y,z){return x+1>P.x-.3&&x<P.x+.3&&z+1>P.z-.3&&z<P.z+.3&&y+1>P.y&&y<P.y+1.8}
+let useT=0;
+function onUse(){if(P.flying)return;const id=selItem();if(!id)return;const it=ITEMS[id];
+  if(it.food){eat(id);return}
+  if(id==='collar'){const c=rayEntity(cows,.6,.9,3.6);if(c){if(c.collared){toast('That cow already has a collar.');return}c.collared=true;c.model.userData.collar.visible=true;removeItem('collar',1);toast('Collar on. Position data coming back.');puff(c.x,c.y+1,c.z,0xff7a1a,8,3)}else toast('Right-click a cow with the collar.');return}
+  if(id==='bottle'){const t=targetAny();if(!t){return}if(isWater(t.b)){removeItem('bottle',1);addItem('wsample',1);puff(t.x+.5,t.y+.9,t.z+.5,t.b===B.POLLUTED?0x7a6a34:0x3f8ed8,8,3)}else if(t.b===B.SOIL||t.b===B.DIRT){removeItem('bottle',1);addItem('ssample',1);puff(t.x+.5,t.y+1,t.z+.5,0x5a3a20,8,3)}else toast('Bottle water or tilled soil.');return}
+  if(it.block!==undefined){const t=targetBlock();if(!t)return;let px=t.x+t.face[0],py=t.y+t.face[1],pz=t.z+t.face[2];
+    if(BD[t.b].replace){px=t.x;py=t.y;pz=t.z}
+    if(!inW(px,py,pz))return;const cur=getB(px,py,pz);if(!(cur===B.AIR||BD[cur].replace))return;
+    const nb=it.block;const d=BD[nb];
+    if(d.mesh==='cross'||nb===B.SIGN||nb===B.FRESHSTAND||nb===B.BANNER){const below=getB(px,py-1,pz);if(!BD[below].solid){toast('Needs solid ground under it.');return}
+      if((nb===B.COVER||nb===B.PRAIRIE)&&![B.GRASS,B.DIRT,B.SOIL,B.SAND].includes(below)){toast('Plant it on soil, dirt, grass or sand.');return}}
+    if(d.solid&&playerOverlaps(px,py,pz))return;for(const c of cows)if(d.solid&&Math.abs(c.x-px-.5)<.9&&Math.abs(c.z-pz-.5)<.9&&py<c.y+1&&py+1>c.y)return;
+    setB(px,py,pz,nb);removeItem(id,1);
+    if(nb===B.SIGN){G.signsPlaced++;puff(px+.5,py+.5,pz+.5,0x1a422b,6,2)}
+    if(nb===B.COVER||nb===B.PRAIRIE)plantEffect(px,py,pz);
+    if(nb===B.PRAIRIE)edits.set(px+','+py+','+pz+'p',1);
+    return}
+}
+function eat(id){const it=ITEMS[id];if(P.food>=10&&!it.crash){toast('Not hungry.');return}removeItem(id,1);P.food=Math.min(10,P.food+it.food);G.hudDirty=true;puff(P.x,P.y+1.5,P.z,0xe0b43a,6,2);
+  if(it.crash){G.crashAt=now+15;toast('Sugar rush. This will not last.')}else toast('Iowa-grown. '+it.name+'.')}
+function plantEffect(x,y,z){let found=[];for(let dx=-9;dx<=9;dx++)for(let dz=-9;dz<=9;dz++)for(let by=SEA-3;by<=SEA;by++){const bx=x+dx,bz=z+dz;if(getB(bx,by,bz)===B.POLLUTED)found.push([dx*dx+dz*dz,bx,by,bz])}
+  if(!found.length){toast('No dirty water within reach of those roots.');return}found.sort((a,b)=>a[0]-b[0]);const n=Math.min(90,found.length);
+  for(let i=0;i<n;i++){const [,bx,by,bz]=found[i];setB(bx,by,bz,B.WATER);G.polluted--;if(i<6)puff(bx+.5,by+1,bz+.5,0x3f8ed8,4,2)}
+  G.plantings++;G.hudDirty=true;toast('Nitrate load down. '+cleanPct()+'% clean.')}
+function creditTick(){ // neighbors plant cover crops after the lab report
+  if(qs('testing').status!=='done'||G.polluted<=0)return;let p=null;for(let k=0;k<12&&!p;k++){const c=pollutedList[floor(Math.random()*pollutedList.length)];if(c&&getB(c[0],c[1],c[2])===B.POLLUTED)p=c}if(!p)return;
+  for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)for(let dy=-3;dy<=0;dy++){if(getB(p[0]+dx,p[1]+dy,p[2]+dz)===B.POLLUTED){setB(p[0]+dx,p[1]+dy,p[2]+dz,B.WATER);G.polluted--}}
+  for(let k=0;k<10;k++){const bx=p[0]+floor(Math.random()*9)-4,bz=p[2]+floor(Math.random()*9)-4;const h=groundY(bx,bz);const g=getB(bx,h,bz);if((g===B.GRASS||g===B.SOIL||g===B.DIRT)&&getB(bx,h+1,bz)===B.AIR){setB(bx,h+1,bz,Math.random()<.7?B.COVER:B.PRAIRIE);break}}
+  G.hudDirty=true}
+function onInteract(){if(P.flying){landPlane();return}
+  const n=rayEntity(npcs,1,1,3.8);if(n){talkTo(n);return}
+  if(rayEntity([plane],.9,2.4,5)){boardPlane();return}
+  const t=targetBlock();if(t){
+    if(t.b===B.ABSENTEE){setB(t.x,t.y,t.z,B.FAMILYSIGN);G.parcels++;puff(t.x+.5,t.y+.5,t.z+.5,0xe0b43a,14,4);toast('Parcel back in Iowa hands ('+G.parcels+'/5)');if(qs('land').status!=='open'&&qs('land').status!=='done'){}return}
+    if(t.b===B.LEDGER){setB(t.x,t.y,t.z,B.AIR);addItem('ledger',1);G.ledgers++;return}
+    if(t.b===B.VENDING){addItem('snack',1);toast('Red 40, corn syrup, a wrapper. Free.');return}
+    if(t.b===B.HAY&&t.x>=147&&t.x<=150&&t.z>=80&&t.z<=82){if(now-G.eggsAt>40){G.eggsAt=now;addItem('eggs',3)}else toast('The hens need a minute.');return}
+    if(t.b===B.FAMILYSIGN){toast('Iowa family farm. Stays that way.');return}
+  }
+  openPanel('inv')}
+function boardPlane(){P.flying=true;P.third=true;P.x=plane.x;P.z=plane.z;P.y=plane.y+.6;P.yaw=plane.yaw;P.pitch=0;P.vy=0;toast('Taylorcraft. W to throttle up, look up to climb, E to set down.');if(!G.flags.flew){G.flags.flew=true;showQuote(QUOTE.taylorcraft)}}
+function landPlane(){P.flying=false;P.vy=0;const g=groundY(P.x,P.z);plane.x=P.x;plane.z=P.z;plane.y=g+1;plane.yaw=P.yaw;P.x+=Math.cos(P.yaw)*1.8;P.z-=Math.sin(P.yaw)*1.8;P.y=surfaceY(P.x,P.z)+1;toast('Set down.')}
+
+/* ---------------- crafting & bag UI ---------------- */
+function renderInv(){const grid=document.getElementById('bagGrid');grid.innerHTML='';const ids=[...G.inv.keys()];document.getElementById('bagEmpty').hidden=ids.length>0;
+  for(const id of ids){const c=document.createElement('div');c.className='cell';c.title=ITEMS[id].name+(ITEMS[id].desc?' — '+ITEMS[id].desc:'');c.appendChild(iconFor(id));const n=document.createElement('span');n.className='n';n.textContent=count(id);c.appendChild(n);c.addEventListener('click',()=>{const j=G.hotbar.indexOf(id);if(j>=0)G.hotbar[j]=G.hotbar[G.sel];G.hotbar[G.sel]=id;drawHotbar();toast(ITEMS[id].name+' → slot '+(G.sel+1))});grid.appendChild(c)}
+  const rc=document.getElementById('recipes');rc.innerHTML='';for(const r of RECIPES){const d=document.createElement('div');d.className='rec';const ico=document.createElement('div');ico.className='ico';ico.appendChild(iconFor(r.out));d.appendChild(ico);
+    const nm=document.createElement('div');nm.className='nm';nm.innerHTML=ITEMS[r.out].name+' ×'+r.n+'<small>'+Object.keys(r.in).map(k=>r.in[k]+' '+ITEMS[k].name+(count(k)<r.in[k]?' (have '+count(k)+')':'')).join(' + ')+' · '+r.how+'</small>';d.appendChild(nm);
+    const b=document.createElement('button');b.textContent='Craft';b.disabled=!hasAll(r.in);b.addEventListener('click',()=>{if(!hasAll(r.in))return;for(const k in r.in)removeItem(k,r.in[k]);addItem(r.out,r.n);renderInv()});d.appendChild(b);rc.appendChild(d)}
+  const el=document.getElementById('eatList');el.innerHTML='';const foods=ids.filter(i=>ITEMS[i].food);if(!foods.length)el.innerHTML='<p class="fine">Nothing to eat. Break oats or corn, shake an apple tree, gather eggs at the coop, trade hay for beef at the locker.</p>';
+  for(const id of foods){const d=document.createElement('div');d.className='rec';const ico=document.createElement('div');ico.className='ico';ico.appendChild(iconFor(id));d.appendChild(ico);const nm=document.createElement('div');nm.className='nm';nm.innerHTML=ITEMS[id].name+' ×'+count(id)+'<small>+'+ITEMS[id].food+' real food'+(ITEMS[id].crash?' then a crash':'')+(ITEMS[id].desc?' · '+ITEMS[id].desc:'')+'</small>';d.appendChild(nm);const b=document.createElement('button');b.textContent='Eat';b.addEventListener('click',()=>{eat(id);renderInv()});d.appendChild(b);el.appendChild(d)}}
+function renderJournal(){const ql=document.getElementById('questList');ql.innerHTML='';const order=QUESTS.filter(q=>qs(q.id).status!=='locked');if(!order.length)ql.innerHTML='<p>No quests yet.</p>';
+  for(const q of order){const s=qs(q.id);const d=document.createElement('div');d.className='quest'+(s.status==='done'?' done':'')+(G.tracked===q.id?' track':'');
+    d.innerHTML='<div class="t"><span>'+q.title+'</span><span class="st">'+(s.status==='done'?'DONE':q.main?'MAIN':'SIDE')+(q.trust?' · +'+q.trust:'')+'</span></div><div class="o">'+(s.stage===2&&q.stage2?q.stage2:q.obj)+'</div><div class="qq">'+qhtml(q.quote)+'<small>— '+q.quote.src+'</small></div>';
+    if(s.status==='open'){const a=document.createElement('div');a.className='act';const b=document.createElement('button');b.textContent=G.tracked===q.id?'Tracking':'Track';b.addEventListener('click',()=>{G.tracked=q.id;G.hudDirty=true;renderJournal()});a.appendChild(b);d.appendChild(a)}ql.appendChild(d)}
+  const nl=document.getElementById('noteList');nl.innerHTML='';const keys=['healthy','cancer','debate','glyphosate','truth','noban','testing','bandaid','iwill','swim','launch','monopolies','antitrust','immunity','land','youngfarmers','lunch','lbs','grazing','rotations','topsoil','isu','moratorium','rebate','kids','schools','soapbox','listening','iowafirst','sevenkids','maha','primary','roots','taylorcraft','hometown','king','donors','trust','home'];
+  for(const k of keys){const q=QUOTE[k];const d=document.createElement('div');d.className='note';d.innerHTML='<b>'+(NOTE_LABELS[k]||k)+'</b>'+qhtml(q)+'<small>— '+q.src+'</small>';nl.appendChild(d)}
+  const gl=document.getElementById('goalList');const inside=cows.filter(c=>c.collared&&c.x>PADDOCK.x0&&c.x<PADDOCK.x1+1&&c.z>PADDOCK.z0&&c.z<PADDOCK.z1+1).length;
+  gl.innerHTML='<h3>Iowa First scoreboard</h3><p>Trust: <b>'+G.trust+'%</b> · Clean water: <b>'+cleanPct()+'%</b> ('+G.polluted+' dirty blocks left of '+G.pollutedTotal+') · Plantings: <b>'+G.plantings+'</b></p><p>Parcels back in Iowa hands: <b>'+G.parcels+'/5</b> · Yard signs planted: <b>'+G.signsPlaced+'/10</b> · Ledgers seized: <b>'+G.ledgers+'</b> · Collared cows in the paddock: <b>'+inside+'/3</b> · Young Iowans who stayed: <b>'+G.kidsStayed+'/3</b> · Listening stops: <b>'+Object.keys(G.listened).length+'/4</b></p><h3>The real four-year goals</h3><p>Reverse youth outmigration (Iowa is #4 nationally for net outmigration of 25–29 year-olds). 10,000 new family farms. Education back in the top 5. Move Iowa to the bottom half of cancer diagnoses (#2 for new diagnoses, #1 fastest rising).</p><p class="fine">Source: zachlahn.com/policy, “Measurable Four-Year Goals.”</p>';
+  const sl=document.getElementById('srcList');sl.innerHTML='<p class="fine">Every quoted line in this game comes from one of these. Ryan and Ashley Wallace are real neighbors whose lines are invented for the game; everyone else (Kayla, Dr. Okafor, Priya…) is fictional. Zach\'s words are only ever quoted from the record.</p>'+SOURCES.map(s=>'<p class="src">'+s[0]+': '+s.slice(1).map(u=>'<a href="'+u+'" target="_blank" rel="noopener">'+u.replace(/^https?:\/\//,'').slice(0,60)+(u.length>68?'…':'')+'</a>').join(' · ')+'</p>').join('')}
+
+/* ---------------- HUD ---------------- */
+const hudEls={hearts:document.getElementById('hearts'),foods:document.getElementById('foods'),wb:document.getElementById('waterbar'),wt:document.getElementById('watertxt'),tb:document.getElementById('trustbar'),tt:document.getElementById('trusttxt'),qt:document.getElementById('trkTitle'),qo:document.getElementById('trkObj'),qd:document.getElementById('trkDist'),cmp:document.getElementById('compass'),clock:document.getElementById('clock'),hint:document.getElementById('hint'),ring:document.getElementById('breakring')};
+function updateHUD(){if(G.hudDirty){G.hudDirty=false;hudEls.hearts.innerHTML=Array.from({length:10},(_,i)=>'<i class="'+(i<P.hp?'':'off')+'"></i>').join('');hudEls.foods.innerHTML=Array.from({length:10},(_,i)=>'<i class="food '+(i<P.food?'':'off')+'"></i>').join('');
+    const cp=cleanPct();hudEls.wb.style.width=cp+'%';hudEls.wt.textContent=cp+'%';hudEls.tb.style.width=G.trust+'%';hudEls.tt.textContent=G.trust+'%';
+    const q=G.tracked&&QBY[G.tracked];hudEls.qt.textContent=q?q.title:'';hudEls.qo.textContent=q?(qs(q.id).stage===2&&q.stage2?q.stage2:q.obj):(QUESTS.some(x=>qs(x.id).status==='open')?'':'Explore. Press J for the notebook.')}
+  const tgt=questTarget();if(tgt){const dx=tgt.x+.5-P.x,dz=tgt.z+.5-P.z;const ht=Math.atan2(-dx,-dz);const rel=ht-P.yaw;hudEls.cmp.style.transform='rotate('+(-rel*180/Math.PI)+'deg)';hudEls.qd.textContent=Math.round(Math.hypot(dx,dz))+' blocks · '+(tgt.name||'')}else{hudEls.qd.textContent='';hudEls.cmp.style.transform='rotate(0deg)'}
+  const tod=dayTime<.2?'Night':dayTime<.3?'Dawn':dayTime<.45?'Morning':dayTime<.6?'Midday':dayTime<.72?'Afternoon':dayTime<.8?'Dusk':'Night';hudEls.clock.textContent='Day '+G.day+' · '+tod+(isNight()?' · slimes out':'');}
+function setHint(t){if(hudEls.hint.textContent!==t)hudEls.hint.textContent=t}
+
+/* ---------------- minimap ---------------- */
+const mmBase=document.createElement('canvas');mmBase.width=WX;mmBase.height=WZ;const mmCol={};
+function mmRender(){const g=mmBase.getContext('2d');const img=g.createImageData(WX,WZ);for(let x=0;x<WX;x++)for(let z=0;z<WZ;z++){const y=surfaceY(x,z);let b=getB(x,y,z);if(b===B.AIR)b=B.GRASS;let c=mmCol[b];if(c===undefined){c=blockColor(b);mmCol[b]=c}const i=(z*WX+x)*4;img.data[i]=(c>>16)&255;img.data[i+1]=(c>>8)&255;img.data[i+2]=c&255;img.data[i+3]=255}g.putImageData(img,0,0)}
+function mmDraw(){const c=document.getElementById('minimap');const g=c.getContext('2d');g.drawImage(mmBase,0,0);const t=questTarget();if(t){g.fillStyle='#e8382c';g.fillRect(t.x-2,t.z-2,5,5)}g.fillStyle='#fff';g.fillRect(P.x-2,P.z-2,5,5);g.fillStyle='#e0b43a';g.fillRect(P.x-1,P.z-1,3,3);
+  const [dx,,dz]=fwd();g.strokeStyle='#e0b43a';g.beginPath();g.moveTo(P.x,P.z);g.lineTo(P.x+dx*7,P.z+dz*7);g.stroke()}
+
+/* ---------------- save / load ---------------- */
+const SAVEKEY='iowacraft.v1';
+function save(){try{const data={v:1,P:{x:P.x,y:P.y,z:P.z,yaw:P.yaw,pitch:P.pitch,hp:P.hp,food:P.food,third:P.third,flying:P.flying},plane:{x:plane.x,y:plane.y,z:plane.z,yaw:plane.yaw},inv:[...G.inv],hotbar:G.hotbar,sel:G.sel,trust:G.trust,tracked:G.tracked,quests:G.quests,flags:G.flags,parcels:G.parcels,signsPlaced:G.signsPlaced,plantings:G.plantings,ledgers:G.ledgers,listened:G.listened,vouchersGiven:G.vouchersGiven,kidsStayed:G.kidsStayed,day:G.day,dayTime,pollutedTotal:G.pollutedTotal,edits:[...edits],cows:cows.map(c=>[Math.round(c.x*10)/10,Math.round(c.z*10)/10,c.collared?1:0]),regrow:regrow.map(r=>[r.x,r.y,r.z,r.b,Math.max(1,Math.round(r.t-now))]),ended:G.ended};
+  localStorage.setItem(SAVEKEY,JSON.stringify(data));G.lastSave=now;const m=document.getElementById('saveMsg');if(m)m.textContent='Saved. Autosaves every 20 seconds in this browser.';return true}catch(e){const m=document.getElementById('saveMsg');if(m)m.textContent='Could not save in this browser (private window?). Progress lasts until you close the tab.';return false}}
+function hasSave(){try{return !!localStorage.getItem(SAVEKEY)}catch(e){return false}}
+function load(){let d=null;try{d=JSON.parse(localStorage.getItem(SAVEKEY))}catch(e){}if(!d)return false;
+  G.flags=d.flags||{};G.flags.loaded=true;for(const e of d.edits||[]){const [x,y,z]=e[0].split(',').map(Number);if(e[0].endsWith('p')){edits.set(e[0],1);continue}if(inW(x,y,z)){setRaw(x,y,z,e[1]);edits.set(e[0],e[1])}}
+  Object.assign(P,d.P);Object.assign(plane,{x:d.plane.x,y:d.plane.y,z:d.plane.z,yaw:d.plane.yaw});G.inv=new Map(d.inv);G.hotbar=d.hotbar;G.sel=d.sel;G.trust=d.trust;G.tracked=d.tracked;G.quests=d.quests;G.parcels=d.parcels;G.signsPlaced=d.signsPlaced;G.plantings=d.plantings;G.ledgers=d.ledgers;G.listened=d.listened||{};G.vouchersGiven=d.vouchersGiven||0;G.kidsStayed=d.kidsStayed||0;G.day=d.day||1;dayTime=d.dayTime||.28;G.pollutedTotal=d.pollutedTotal||1;G.ended=!!d.ended;
+  for(const c of cows)scene.remove(c.model);cows.length=0;for(const c of d.cows||[])spawnCow(c[0],c[1],!!c[2]);
+  regrow.length=0;for(const r of d.regrow||[])regrow.push({x:r[0],y:r[1],z:r[2],b:r[3],t:now+r[4]});
+  if(P.flying){P.flying=false;P.y=groundY(P.x,P.z)+1}
+  return true}
+function clearSave(){try{localStorage.removeItem(SAVEKEY)}catch(e){}}
+
+/* ---------------- world setup ---------------- */
+function generateWorld(progress){
+  blocks.fill(0);progress(5,'Laying down the Loess Hills and 6 rivers');buildTerrain();progress(35,'Grading the mile roads');buildStructures();buildRoads();progress(45,'Planting 10,000 farms');buildFields();
+  setRaw(149,13,81,B.HAY);
+  progress(60,'Filling the creek');}
+function freshGame(){P.x=161.5;P.y=14;P.z=74.5;P.yaw=Math.PI/2;P.pitch=-.05;P.hp=10;P.food=10;P.flying=false;P.third=false;P.dead=false;G.inv=new Map();G.hotbar=new Array(9).fill(null);G.sel=0;G.trust=0;G.quests={};G.flags={};G.parcels=0;G.signsPlaced=0;G.plantings=0;G.ledgers=0;G.listened={};G.vouchersGiven=0;G.kidsStayed=0;G.day=1;dayTime=.28;G.ended=false;G.tracked=null;
+  for(const c of cows)scene.remove(c.model);cows.length=0;for(const [x,z] of [[162.5,88.5],[165.5,89.5],[168.5,88.5],[163.5,90]])spawnCow(x,z,false);
+  plane.x=167;plane.z=66.5;plane.y=13;plane.yaw=-Math.PI/2;regrow.length=0;
+  openQuest('homeplace');G.tracked='homeplace';addItem('oats',4);addItem('apple',2);}
+function startGame(fromSave){
+  document.getElementById('loading').style.display='flex';const prog=(p,m)=>{document.getElementById('lprog').style.width=p+'%';document.getElementById('lmsg').textContent=m};
+  setTimeout(()=>{edits.clear();if(!G.flags.pristine)generateWorld(prog);const pristine=G.flags.pristine;G.flags.pristine=false;
+    for(const n of npcs)scene.remove(n.model);npcs.length=0;setupNPCs();
+    let ok=false;if(fromSave)ok=load();if(!ok){G.flags.loaded=false;freshGame()}
+    indexWater();prog(70,'Meshing 126 chunks');
+    for(const s of slimes)scene.remove(s.model);slimes.length=0;
+    if(!pristine||fromSave){dirty.clear();for(let cx=0;cx<CX;cx++)for(let cz=0;cz<CZ;cz++)dirty.add(ckey(cx,cz))}
+    const build=()=>{const t0=performance.now();while(dirty.size&&performance.now()-t0<40)rebuildDirty(2);const done=CX*CZ-dirty.size;prog(70+30*done/(CX*CZ),'Meshing chunk '+done+' of '+(CX*CZ));if(dirty.size)setTimeout(build,0);else{mmRender();mmDraw();document.getElementById('toasts').innerHTML='';document.getElementById('loading').style.display='none';document.getElementById('hud').classList.add('on');G.state='play';G.hudDirty=true;drawHotbar();if(!touch.on){try{canvas.requestPointerLock()}catch(x){}}
+      if(!fromSave)setTimeout(()=>{toast('Homeplace, 74th St outside Belle Plaine. Ryan Wallace is at the porch steps. '+(touch.on?'Left stick walks, drag right side to look.':'Click to grab the mouse. WASD walks.'),7000)},400);G.playedSince=now}};build()},30)}
+function showTitle(){G.state='title';document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='title'));document.getElementById('hud').classList.remove('on');document.getElementById('btnContinue').hidden=!hasSave();if(document.pointerLockElement)document.exitPointerLock()}
+document.getElementById('btnNew').addEventListener('click',()=>{document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));clearSave();startGame(false)});
+document.getElementById('btnContinue').addEventListener('click',()=>{document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));startGame(true)});
+document.getElementById('btnHow').addEventListener('click',()=>{G.flags.fromTitle=true;G.panel='help';document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='help'))});
+document.getElementById('btnNotes').addEventListener('click',()=>{G.flags.fromTitle=true;G.panel='journal';renderJournal();document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='journal'))});
+document.getElementById('btnResume').addEventListener('click',closePanel);
+document.getElementById('btnJournal2').addEventListener('click',()=>openPanel('journal'));
+document.getElementById('btnHelp2').addEventListener('click',()=>openPanel('help'));
+document.getElementById('btnSave').addEventListener('click',()=>{save()});
+document.getElementById('btnQuit').addEventListener('click',()=>{save();showTitle()});
+document.getElementById('btnRespawn').addEventListener('click',()=>{P.dead=false;P.hp=10;P.food=Math.max(P.food,5);P.x=161.5;P.y=14;P.z=74.5;P.vx=P.vy=P.vz=0;P.flying=false;G.hudDirty=true;closePanel()});
+document.getElementById('btnEndNotes').addEventListener('click',()=>{G.panel='journal';renderJournal();document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='journal'));document.querySelector('#journal .close').onclick=()=>{closePanel()}});
+document.getElementById('btnEndPlay').addEventListener('click',()=>{closePanel()});
+
+/* ---------------- ending & rally ---------------- */
+function startRally(){const crowdO=[{shirtCol:0x1a422b},{shirtCol:0xe0b43a},{shirtCol:0xffffff},{shirtCol:0xa63c2a},{shirtCol:0x4a6a9a},{shirtCol:0x7a9a4a}];
+  for(let i=0;i<14;i++){const m=humanoid(Object.assign({hat:i%3?null:0x1a422b},crowdO[i%crowdO.length]));const x=STAGE.x0-2+Math.random()*(STAGE.x1-STAGE.x0+4),z=STAGE.z1+1.5+Math.random()*4;m.position.set(x,groundY(x,z)+1,z);m.rotation.y=Math.PI;scene.add(m);G.rallyCrowd.push(m)}
+  G.flags.rallyT=now;for(let i=0;i<10;i++)setTimeout(()=>puff(STAGE.x0+Math.random()*6,15,STAGE.z0+Math.random()*5,[0x1a422b,0xe0b43a,0xffffff][i%3],20,7),i*300);toast('Make Iowa Healthy Again Rally · Des Moines',6000)}
+function startEnding(){if(G.ended)return;G.ended=true;qs('election').status='done';G.trust=100;dayTime=.85;
+  const body=document.getElementById('endBody');const t=Object.keys(G.listened).length;
+  body.innerHTML='<p>The porch light is on. Somebody hung a hand-painted IOWA FIRST banner off the tower, and the creek behind Homeplace runs clear enough to see the gravel.</p><p>Clean water: <b>'+cleanPct()+'%</b> · Plantings: <b>'+G.plantings+'</b> · Parcels back in Iowa hands: <b>'+G.parcels+'/5</b> · Yard signs: <b>'+G.signsPlaced+'</b> · Listening stops: <b>'+t+'/4</b> · Young Iowans who stayed: <b>'+G.kidsStayed+'/3</b></p><div class="note"><b>The record</b>'+qhtml(QUOTE.trust)+'<small>— '+QUOTE.trust.src+'</small></div><div class="note"><b>The record</b>'+qhtml(QUOTE.home)+'<small>— '+QUOTE.home.src+'</small></div><p class="fine">Fan-made. Not authorized by or affiliated with Lahn for Governor, MAHA Action, or any committee. Real quotes, made-up neighbors, blocky rivers. The real election is Tuesday, November 3, 2026.</p>';
+  for(let i=0;i<24;i++)setTimeout(()=>puff(80+Math.random()*14,22+Math.random()*6,103+Math.random()*10,[0xe0b43a,0xffffff,0x1a422b,0xe8382c][i%4],30,9),i*450);
+  setTimeout(()=>{openPanel('ending')},1800);save()}
+
+/* ---------------- main loop ---------------- */
+let last=performance.now(),slimeSpawnT=0,mmT=0,questT=0,regenT=0,hungerT=0;
+const eyeV=new THREE.Vector3();
+function updatePlayer(dt){if(P.dead)return;
+  let fx=0,fz=0;if(keys.KeyW||keys.ArrowUp)fz-=1;if(keys.KeyS||keys.ArrowDown)fz+=1;if(keys.KeyA||keys.ArrowLeft)fx-=1;if(keys.KeyD||keys.ArrowRight)fx+=1;fx+=touch.mx;fz+=touch.mz;const len=Math.hypot(fx,fz);if(len>1){fx/=len;fz/=len}
+  const sy=Math.sin(P.yaw),cy=Math.cos(P.yaw);const jump=keys.Space||touch.jump;
+  if(P.flying){const [dx,dy,dz]=fwd();const thr=fz<0?18:fz>0?5:9;P.x+=dx*thr*dt;P.z+=dz*thr*dt;P.y+=(dy*thr+(jump?4:0))*dt;P.yaw-=fx*1.4*dt;P.x=clamp(P.x,2,WX-2);P.z=clamp(P.z,2,WZ-2);P.y=clamp(P.y,SEA+2,WY-2);
+    const g=groundY(P.x,P.z);if(P.y<g+1.2){if(dy<-.25||thr<=5){landPlane()}else P.y=g+1.2}
+    plane.x=P.x;plane.y=P.y-.6;plane.z=P.z;plane.yaw=P.yaw;plane.model.userData.prop.rotation.z+=dt*40;return}
+  const head=getB(floor(P.x),floor(P.y+1.5),floor(P.z)),feet=getB(floor(P.x),floor(P.y+.4),floor(P.z));P.inWater=isWater(head)||isWater(feet);
+  const sprint=(keys.ShiftLeft||keys.ShiftRight||P.sprint)&&fz<0&&!P.inWater;const sp=P.inWater?2.6:sprint?6.4:4.3;
+  const mx=(sy*fz+cy*fx)*sp,mz=(cy*fz-sy*fx)*sp;const acc=P.onGround?18:6;P.vx+=(mx-P.vx)*Math.min(1,acc*dt);P.vz+=(mz-P.vz)*Math.min(1,acc*dt);
+  if(P.inWater){P.vy=Math.max(P.vy-9*dt,-2.2);if(jump)P.vy=3.2;const fall=moveEntity(P,.6,1.8,dt,0);}else{if(jump&&P.onGround){P.vy=8.6;P.onGround=false}const fall=moveEntity(P,.6,1.8,dt,28);if(fall>15){const dmg=Math.min(9,floor((fall-13)/3));if(dmg>0)damage(dmg,'Fall')}}
+  if(sprint&&P.onGround)hungerT+=dt*.6;
+}
+function damage(n,why){if(P.dead)return;P.hp-=n;G.hudDirty=true;if(P.hp<=0){P.hp=0;P.dead=true;document.getElementById('deadTxt').textContent=why==='Fall'?'That was a long way down. You wake up on the porch at Homeplace.':'The nitrate slimes got you in the dark. You wake up on the porch at Homeplace. The creek is still brown — somebody should do something about that.';openPanel('dead')}}
+function updateEntities(dt){
+  const holdingHay=selItem()==='hay';
+  for(const c of cows){c.t-=dt;if(c.t<=0){c.t=2+Math.random()*4;c.yaw=Math.random()*6.28;c.speed=Math.random()<.6?1.1:0}
+    const d=Math.hypot(P.x-c.x,P.z-c.z);let sp=c.speed||0,yaw=c.yaw;
+    if(holdingHay&&d<9&&d>2&&!P.flying){yaw=Math.atan2(P.x-c.x,P.z-c.z);sp=1.7}else if(d<1.3){yaw=Math.atan2(c.x-P.x,c.z-P.z);sp=2.5}
+    if(sp>0){c.vx+=(Math.sin(yaw)*sp-c.vx)*Math.min(1,8*dt);c.vz+=(Math.cos(yaw)*sp-c.vz)*Math.min(1,8*dt);c.model.rotation.y=yaw+Math.PI}else{c.vx*=.8;c.vz*=.8}
+    c.blocked=false;moveEntity(c,.8,1.2,dt,28);if(c.blocked&&c.onGround){const fx=floor(c.x+Math.sin(yaw)*.9),fz=floor(c.z+Math.cos(yaw)*.9),fy=floor(c.y+.1);const b0=getB(fx,fy,fz);if(BD[b0].solid&&b0!==B.FENCE&&b0!==B.WHITEFENCE&&!isSolid(fx,fy+1,fz)&&!isSolid(fx,fy+2,fz))c.vy=6.5;else{c.t=0}}
+    if(isWater(getB(floor(c.x),floor(c.y+.3),floor(c.z))))c.vy=2.5;
+    c.model.position.set(c.x,c.y,c.z)}
+  for(let i=slimes.length-1;i>=0;i--){const s=slimes[i];s.t-=dt;s.hit=Math.max(0,s.hit-dt);const d=Math.hypot(P.x-s.x,P.z-s.z);
+    if(s.onGround&&s.t<=0){s.t=.7+Math.random()*.9;let yaw=Math.random()*6.28;if(d<18&&!P.dead)yaw=Math.atan2(P.x-s.x,P.z-s.z);s.vx=Math.sin(yaw)*4.2;s.vz=Math.cos(yaw)*4.2;s.vy=7.5}
+    if(s.onGround){s.vx*=.7;s.vz*=.7}moveEntity(s,.8,.9,dt,28);
+    if(isWater(getB(floor(s.x),floor(s.y+.3),floor(s.z))))s.vy=Math.max(s.vy,3);
+    const body=s.model.userData.body;const sq=s.onGround?1:1.25;body.scale.set(1/Math.sqrt(sq),sq,1/Math.sqrt(sq));body.material=slimeMat;s.model.position.set(s.x,s.y,s.z);
+    if(d<1.1&&Math.abs(P.y-s.y)<1.6&&!P.flying&&!P.dead&&(s.cool||0)<=0){s.cool=1.2;damage(1,'Slime');P.vx=(P.x-s.x)*6;P.vz=(P.z-s.z)*6;P.vy=4;if(!G.flags.slimeHint){G.flags.slimeHint=true;toast('Nitrate slime! Whack it (left click). Clean water stops them spawning.')}}s.cool=(s.cool||0)-dt;
+    if(d>48||(!isNight()&&Math.random()<dt*.05)){scene.remove(s.model);slimes.splice(i,1)}}
+  for(const n of npcs){const dx=P.x-n.x,dz=P.z-n.z;if(dx*dx+dz*dz<36)n.model.rotation.y=Math.atan2(-dx,-dz);else n.model.rotation.y=n.face}
+  // spawn slimes at night near dirty water
+  slimeSpawnT-=dt;if(slimeSpawnT<=0){slimeSpawnT=3;if(isNight()&&slimes.length<7&&pollutedList.length&&!P.flying){for(let k=0;k<8;k++){const c=pollutedList[floor(Math.random()*pollutedList.length)];if(getB(c[0],c[1],c[2])!==B.POLLUTED)continue;const d=Math.hypot(c[0]-P.x,c[2]-P.z);if(d<10||d>30)continue;const bx=c[0]+floor(Math.random()*7)-3,bz=c[2]+floor(Math.random()*7)-3;const h=groundY(bx,bz);if(LAND[bx*WZ+bz]===1&&h>=SEA){spawnSlime(bx+.5,h+1,bz+.5);break}}}}
+  // rally crowd sway
+  for(let i=0;i<G.rallyCrowd.length;i++){const m=G.rallyCrowd[i];m.position.y=groundY(m.position.x,m.position.z)+1+Math.abs(Math.sin(now*4+i))*.15}
+}
+function updateMining(dt){if(P.flying||P.dead||G.state!=='play'){hl.visible=false;hudEls.ring.style.display='none';setHint('');return}
+  const n=rayEntity(npcs,1,1,3.8);if(n){hl.visible=false;setHint(n.name+' — E to talk');hudEls.ring.style.display='none';return}
+  const nearPlane=!!rayEntity([plane],.9,2.4,5);if(nearPlane){setHint('Taylorcraft — E to fly')}
+  const t=targetBlock();
+  if(!t){hl.visible=false;hudEls.ring.style.display='none';if(!nearPlane)setHint(rayEntity(slimes,.45,.75,3.6)?'Nitrate slime':rayEntity(cows,.6,.9,3.6)?(selItem()==='collar'?'Cow — right-click to collar':'Cow'):'');mining=null;return}
+  hl.visible=true;hl.position.set(t.x+.5,t.y+.5,t.z+.5);const d=BD[t.b];
+  let h=d.name;if(t.b===B.ABSENTEE)h='Absentee-owner sign — E';if(t.b===B.LEDGER)h='Cartel ledger — E to take';if(t.b===B.VENDING)h='Vending machine — E for a snack, or break it';if(t.b===B.HAY&&t.x>=147&&t.x<=150&&t.z>=80&&t.z<=82)h='Nest — E to gather eggs';
+  if(!nearPlane)setHint(h);
+  if(mouseDown[0]&&!d.unbreak){if(!mining||mining.x!==t.x||mining.y!==t.y||mining.z!==t.z)mining={x:t.x,y:t.y,z:t.z,p:0};mining.p+=dt;if(mining.p>=d.hard){breakBlock(t.x,t.y,t.z);mining=null;hudEls.ring.style.display='none'}else{hudEls.ring.style.display='block';hudEls.ring.style.setProperty('--p',Math.round(100*mining.p/d.hard)+'%')}}
+  else{mining=null;hudEls.ring.style.display='none';if(mouseDown[0]&&d.unbreak)setHint(h+' (can\'t break)')}
+  if(mouseDown[2]){useT-=dt;if(useT<=0){useT=.28;onUse()}}else useT=0}
+function updateCamera(){const [fx,fy,fz]=fwd();const ex=P.x,ey=P.y+1.62,ez=P.z;
+  camera.rotation.order='YXZ';camera.rotation.y=P.yaw;camera.rotation.x=P.pitch;camera.rotation.z=0;
+  if(P.third||P.flying){let dist=P.flying?7:4.5;const hit=raycast(ex,ey,ez,-fx,-fy,-fz,dist,solidPred);if(hit)dist=Math.max(.6,hit.dist-.4);let cx=ex-fx*dist,cy=ey-fy*dist+(P.flying?1.2:.3),cz=ez-fz*dist;for(let k=0;k<6&&isSolid(floor(cx),floor(cy),floor(cz))&&dist>.7;k++){dist-=.5;cx=ex-fx*dist;cy=ey-fy*dist+(P.flying?1.2:.3);cz=ez-fz*dist}camera.position.set(cx,cy,cz);playerModel.visible=!P.flying}
+  else{camera.position.set(ex,ey,ez);playerModel.visible=false}
+  playerModel.position.set(P.x,P.y,P.z);playerModel.rotation.y=P.yaw;const moving=Math.hypot(P.vx,P.vz)>.5;animateLimbs(playerModel,moving?now*9:0,moving?.7:0);
+  plane.model.position.set(plane.x,plane.y,plane.z);plane.model.rotation.set(0,plane.yaw,0);if(P.flying){plane.model.rotation.x=-P.pitch*.6;plane.model.rotation.z=(P.yaw-(P._lastYaw||P.yaw))*8;}P._lastYaw=P.yaw;}
+function loop(){requestAnimationFrame(loop);const t=performance.now();let dt=Math.min(.05,(t-last)/1000);last=t;
+  if(G.state==='loading'||G.state==='title'){if(G.state==='title'&&chunks.size){dayTime=.4;camera.position.set(153+Math.sin(t/11000)*34,27,76+Math.cos(t/11000)*34);camera.lookAt(153,13,76);updateSky(0);renderer.render(scene,camera)}return}
+  const paused=G.state==='panel';now+=paused?0:dt;
+  if(!paused){const light=updateSky(dt);if(dayTime<.002&&G.flags.lastDayTick!==G.day){G.day++;G.flags.lastDayTick=G.day}
+    if(G.state==='play')updatePlayer(dt);updateEntities(dt);updateParticles(dt);tickRegrow();
+    hungerT+=dt;if(hungerT>45){hungerT=0;if(P.food>0){P.food--;G.hudDirty=true}}
+    regenT+=dt;if(regenT>8){regenT=0;if(P.food>=7&&P.hp<10&&!P.dead){P.hp++;G.hudDirty=true}else if(P.food<=0&&P.hp>1){damage(1,'Hunger')}}
+    if(G.crashAt&&now>G.crashAt){G.crashAt=0;P.food=Math.max(0,P.food-6);G.hudDirty=true;toast('Sugar crash. Eat something real.')}
+    G.creditTimer+=dt;if(G.creditTimer>2.5){G.creditTimer=0;creditTick()}
+    questT+=dt;if(questT>.5){questT=0;checkQuests();npcMarks()}
+    if(now-G.lastSave>20&&G.state==='play'){save()}
+    updateMining(dt);rebuildDirty(4);
+  }
+  updateCamera();updateHUD();mmT+=dt;if(mmT>.4){mmT=0;if(G.minimap)mmDraw();if(Math.random()<.15)mmRender()}
+  renderer.render(scene,camera);
+}
+/* ---------------- boot ---------------- */
+(function boot(){
+  const prog=(p,m)=>{document.getElementById('lprog').style.width=p+'%';document.getElementById('lmsg').textContent=m};
+  setTimeout(()=>{generateWorld(prog);setupNPCs();freshGame();indexWater();G.quests={};G.tracked=null;G.flags.pristine=true;
+    dirty.clear();for(let cx=0;cx<CX;cx++)for(let cz=0;cz<CZ;cz++)dirty.add(ckey(cx,cz));
+    const build=()=>{const t0=performance.now();while(dirty.size&&performance.now()-t0<40)rebuildDirty(2);prog(70+30*(1-dirty.size/(CX*CZ)),'Meshing chunks');if(dirty.size)setTimeout(build,0);else{document.getElementById('loading').style.display='none';showTitle()}};build()},50);
+  loop();
+})();
+
+window.__iowa={get P(){return P},get G(){return G},getB,groundY,surfaceY,POI,npcs,cows,slimes,setB,QBY,qs,completeQuest,addItem,openQuest,talkTo,dialogNext,closeDialog,renderer,save,load,cleanPct,plantEffect,spawnSlime,startRally,B,get edits(){return edits},get dayTime(){return dayTime},set dayTime(v){dayTime=v}};
+})();
+</script>
+</body>
+</html>
